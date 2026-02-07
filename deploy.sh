@@ -5,12 +5,13 @@ echo "🚀 Starting deployment..."
 
 # Variables
 GITHUB_REPOSITORY="hsm9411/portfolio-backend"
-IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:latest"
+IMAGE_TAG="${IMAGE_TAG:-latest}"  # 환경 변수로 태그 지정, 기본값 latest
+IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG}"
 COMPOSE_FILE="/home/ubuntu/portfolio-backend/docker-compose.yml"
 ENV_FILE="/home/ubuntu/portfolio-backend/.env"
 
-# Pull latest image
-echo "📦 Pulling latest Docker image..."
+# Pull image
+echo "📦 Pulling Docker image (${IMAGE_TAG})..."
 docker pull ${IMAGE_NAME}
 
 # Stop and remove old containers
