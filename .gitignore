@@ -47,3 +47,26 @@ ormconfig.json
 
 # Deployment information (contains sensitive data)
 DEPLOYMENT.md
+
+# SSH Keys and Private Keys
+*.pem
+*.key
+*.cert
+*.crt
+id_rsa
+id_rsa.pub
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Database
+*.sqlite
+*.db

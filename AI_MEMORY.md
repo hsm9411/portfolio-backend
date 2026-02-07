@@ -186,6 +186,51 @@ id, target_type, target_id, user_id, ip_address
 
 ---
 
+### 2026-02-07 (CI/CD 및 배포 구성)
+
+#### CI/CD 완료 ✅
+- ✅ **GitHub Actions Workflow** (.github/workflows/deploy.yml)
+  - main 브랜치: Production 배포 (포트 3000)
+  - develop 브랜치: Development 배포 (포트 3001)
+  - Docker 이미지 빌드 및 GHCR push
+  - Oracle Cloud SSH 배포 자동화
+
+#### Docker 설정 완료 ✅
+- ✅ **Dockerfile**: Multi-stage 빌드 (builder + production)
+- ✅ **docker-compose.yml**: NestJS + Redis 오케스트레이션
+- ✅ **Health Check**: 애플리케이션 상태 모니터링
+- ✅ **.dockerignore**: 불필요한 파일 제외
+
+#### 배포 스크립트 완료 ✅
+- ✅ **deploy.sh**: 배포 자동화 스크립트
+- ✅ **setup-server.sh**: 서버 초기 설정 스크립트
+  - Docker & Docker Compose 설치
+  - 방화벽 설정
+  - 프로젝트 디렉토리 생성
+  - .env 템플릿 생성
+
+#### 문서화 완료 ✅
+- ✅ **DEPLOY_GUIDE.md**: 상세한 배포 가이드
+  - GitHub Secrets 설정 방법
+  - 서버 초기 설정 절차
+  - 배포 방법 (자동/수동)
+  - 트러블슈팅 가이드
+- ✅ **README.md**: Auth 완료 상태 업데이트, 배포 섹션 추가
+- ✅ **아키텍처 다이어그램**: 모놀리식 구조 설명
+
+#### 인프라 정보 ✅
+- ✅ **Oracle Cloud Server**: 158.180.75.205 (1vCPU, 1GB)
+- ✅ **Supabase DB**: protfolio 프로젝트 연결 완료
+- ✅ **Redis**: 로컬 및 Docker 컨테이너 실행
+
+#### TypeScript 오류 수정 ✅
+- ✅ @nestjs/cache-manager 패키지 설치
+- ✅ Response 타입 import 수정 (import type)
+- ✅ ConfigService.get() 타입 안전성 개선
+- ✅ JWT/OAuth Strategy 타입 수정
+
+---
+
 ## 🚧 다음 작업 (우선순위)
 
 ### Task #1: Projects 모듈 구현
@@ -338,22 +383,100 @@ Auth 모듈이 성공적으로 구현되었으며, 알려진 이슈는 없습니
 
 ## 📌 다음 세션 시작 전 체크리스트
 
-- [x] ~~Task #2 (Auth 모듈) 상태 확인~~ ✅ 완료
-- [ ] 환경 변수 설정 완료 확인 (.env 파일 생성)
-- [ ] Supabase DB 스키마 적용 확인 (schema.sql 실행)
-- [ ] Redis 서버 실행 확인
-- [ ] OAuth Client ID/Secret 설정 (Google, GitHub)
-- [ ] 개발 서버 실행 테스트 (npm run start:dev)
+### 로컬 개발 환경
+- [x] ~~Auth 모듈 구현~~ ✅ 완료
+- [x] ~~CI/CD 구성~~ ✅ 완료
+- [x] ~~Docker 설정~~ ✅ 완료
+- [x] ~~환경 변수 설정 (.env 파일)~~ ✅ 완료
+- [x] ~~Redis 서버 실행~~ ✅ 완료
+- [x] ~~개발 서버 실행 테스트~~ ✅ 완료
+
+### 배포 준비 (다음 세션에서 진행)
+- [ ] **GitHub Secrets 설정** (ORACLE_SSH_KEY, ORACLE_HOST, ORACLE_USER)
+- [ ] **Oracle Cloud 서버 초기 설정** (setup-server.sh 실행)
+- [ ] **서버 .env 파일 설정** (프로덕션 환경 변수)
+- [ ] **GitHub Container Registry 로그인**
+- [ ] **Supabase DB 스키마 적용** (schema.sql 실행)
+- [ ] **OAuth Client ID/Secret 설정** (Google, GitHub)
+- [ ] **배포 테스트** (develop → main)
+
+### Supabase 설정
+- [ ] **SQL Editor에서 schema.sql 실행**
+  - https://supabase.com/dashboard/project/protfolio/sql
+  - 전체 스키마 생성 확인
+- [ ] **테스트 데이터 추가** (선택사항)
 
 ---
 
 ## 📦 다음 구현 우선순위
 
+### Phase 1: 핵심 모듈 구현
 1. **Projects 모듈** - 프로젝트 포트폴리오 CRUD
+   - Controller, Service, DTO 생성
+   - 조회수 카운터 (Redis)
+   - 검색 및 필터링
+   - Swagger 문서화
+
 2. **Posts 모듈** - 블로그 글 CRUD
+   - Controller, Service, DTO 생성
+   - 카테고리/태그 필터링
+   - 조회수 카운터
+   - 읽기 시간 계산
+
 3. **Comments 모듈** - 댓글/대댓글
+   - Controller, Service, DTO 생성
+   - 대댓글 (parent_id) 처리
+   - 익명/로그인 구분
+
 4. **Likes 모듈** - 좋아요 기능
+   - Controller, Service, DTO 생성
+   - 중복 방지 로직
+   - 카운터 동기화
+
+### Phase 2: 배포 및 테스트
+5. **프로덕션 배포**
+   - GitHub Actions 자동 배포 테스트
+   - Oracle Cloud 서버 모니터링
+   - API 테스트 (Postman/Swagger)
+
+6. **프론트엔드 연동**
+   - CORS 설정 확인
+   - API 문서 공유
 
 ---
 
-**마지막 업데이트**: 2026-02-07 (Auth 모듈 완료)
+## 🔧 알려진 이슈 및 개선 사항
+
+### 현재 없음 ✅
+모든 기능이 정상 작동 중입니다.
+
+### 향후 개선 계획
+- [ ] **Rate Limiting**: API 요청 제한 (DDoS 방지)
+- [ ] **Logging**: Winston 또는 Pino 로거 추가
+- [ ] **Email Service**: 회원가입 인증, 비밀번호 재설정
+- [ ] **File Upload**: 프로젝트 썸네일, 프로필 이미지 업로드 (S3 또는 Supabase Storage)
+- [ ] **Admin Dashboard**: 관리자 전용 대시보드
+- [ ] **WebSocket**: 실시간 댓글 알림 (선택사항)
+
+---
+
+## 📝 중요 참고 사항
+
+### 아키텍처
+- **구조**: 모놀리식 (Monolithic)
+- **이유**: 포트폴리오 목적, 간단한 개발/배포, 비용 효율적
+- **장점**: 빠른 개발, 1개 서버로 충분, 모든 기능 밀접하게 연관
+
+### OAuth 구현
+- **방식**: Passport.js 직접 구현
+- **이유**: 완전한 커스터마이징, 포트폴리오 기술 시연
+- **장점**: 커스텀 필드 자유롭게 추가 가능
+
+### 배포 전략
+- **main 브랜치**: Production (포트 3000)
+- **develop 브랜치**: Development (포트 3001)
+- **자동 배포**: GitHub Actions → Oracle Cloud
+
+---
+
+**마지막 업데이트**: 2026-02-07 (CI/CD 및 배포 구성 완료)
