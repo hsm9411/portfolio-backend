@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+echo "🚀 Starting deployment..."
+
+# Variables
+GITHUB_REPOSITORY="hsm9411/portfolio-backend"
+IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:latest"
+COMPOSE_FILE="/home/ubuntu/portfolio-backend/docker-compose.yml"
+ENV_FILE="/home/ubuntu/portfolio-backend/.env"
+
+# Pull latest image
+echo "📦 Pulling latest Docker image..."
+docker pull ${IMAGE_NAME}
+
+# Stop and remove old containers
+echo "🛑 Stopping old containers..."
+cd /home/ubuntu/portfolio-backend
+docker-compose down || true
+
+# Start new containers
+echo "▶️  Starting new containers..."
+export GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
+docker-compose up -d
+
+# Clean up old images
+echo "🧹 Cleaning up old images..."
+docker image prune -af
+
+# Show logs
+echo "📋 Container logs:"
+docker-compose logs --tail=50
+
+echo "✅ Deployment completed!"
+echo "🌐 Application: http://localhost:3000"
+echo "📊 Metrics: http://localhost:3000/metrics"

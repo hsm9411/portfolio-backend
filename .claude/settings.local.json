@@ -15,7 +15,9 @@
       "Bash(docker run:*)",
       "Bash(docker exec:*)",
       "Bash(npm run start:dev:*)",
-      "Bash(Get-Content \"C:\\\\Users\\\\hasun\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--hsm9411-portfolio-backend\\\\tasks\\\\b5cf681.output\" -Tail 50)"
+      "Bash(Get-Content \"C:\\\\Users\\\\hasun\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--hsm9411-portfolio-backend\\\\tasks\\\\b5cf681.output\" -Tail 50)",
+      "Bash(chmod:*)",
+      "Bash(git restore:*)"
     ]
   }
 }

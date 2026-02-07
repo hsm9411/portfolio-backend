@@ -16,14 +16,15 @@
 
 | 기능 | 설명 | 상태 |
 |------|------|------|
+| **OAuth 인증** | Google, GitHub 간편 로그인 + JWT | ✅ 완료 |
 | **프로젝트 포트폴리오** | 프로젝트 소개, 기술 스택, 데모/깃허브 URL | ⏳ 구현 예정 |
 | **기술 블로그** | 카테고리별 글, 마크다운 지원, 태그 검색 | ⏳ 구현 예정 |
-| **OAuth 인증** | Google, GitHub 간편 로그인 + JWT | ⏳ 구현 예정 |
 | **조회수 카운터** | Redis 캐싱, IP 기반 중복 방지 | ⏳ 구현 예정 |
 | **좋아요 기능** | 로그인/익명 구분, 중복 방지 | ⏳ 구현 예정 |
 | **댓글 시스템** | 대댓글 지원, 익명/로그인 구분 | ⏳ 구현 예정 |
 | **Full-text 검색** | PostgreSQL GIN 인덱스 활용 | ✅ 스키마 완료 |
 | **Redis 캐싱** | 조회수, 세션 관리 | ✅ 설정 완료 |
+| **CI/CD** | GitHub Actions → Oracle Cloud 자동 배포 | ✅ 완료 |
 
 ---
 
@@ -100,8 +101,8 @@ portfolio-backend/
 │   │   ├── comment/comment.entity.ts
 │   │   ├── like/like.entity.ts
 │   │   └── view/view.entity.ts
-│   ├── modules/             # ⏳ 기능 모듈 (구현 예정)
-│   │   ├── auth/            # OAuth + JWT
+│   ├── modules/             # 기능 모듈
+│   │   ├── auth/            # ✅ OAuth + JWT
 │   │   ├── projects/        # 프로젝트 포트폴리오
 │   │   ├── posts/           # 블로그 글
 │   │   ├── comments/        # 댓글/대댓글
@@ -164,14 +165,38 @@ npm run format
 
 ---
 
-## 🚀 배포 (Docker)
+## 🚀 배포
+
+### GitHub Actions (자동 배포)
+
+**main 브랜치에 push하면 자동으로 Oracle Cloud에 배포됩니다:**
 
 ```bash
-# Dockerfile 작성 (예정)
-# docker-compose.yml 작성 (예정)
-
-docker-compose up -d
+git checkout main
+git merge develop
+git push origin main
 ```
+
+### Docker (수동 배포)
+
+```bash
+# 이미지 빌드
+docker build -t portfolio-backend .
+
+# 실행
+docker-compose up -d
+
+# 로그 확인
+docker-compose logs -f
+```
+
+### 배포 가이드
+
+자세한 배포 방법은 [DEPLOY_GUIDE.md](./DEPLOY_GUIDE.md) 참고
+
+**서버 정보:**
+- **Production**: http://158.180.75.205:3000
+- **Development**: http://158.180.75.205:3001
 
 ---
 
@@ -180,13 +205,16 @@ docker-compose up -d
 ### Swagger
 개발 서버 실행 후 http://localhost:3000/api 접속
 
-### 주요 엔드포인트 (구현 예정)
+### 주요 엔드포인트
 
-#### Auth
-- `POST /auth/signup` - 회원가입
-- `POST /auth/signin` - 로그인
-- `GET /auth/google` - Google OAuth
-- `GET /auth/github` - GitHub OAuth
+#### Auth ✅
+- `POST /auth/register` - 회원가입
+- `POST /auth/login` - 로그인
+- `GET /auth/me` - 현재 사용자 정보
+- `GET /auth/google` - Google OAuth 시작
+- `GET /auth/google/callback` - Google OAuth 콜백
+- `GET /auth/github` - GitHub OAuth 시작
+- `GET /auth/github/callback` - GitHub OAuth 콜백
 
 #### Projects
 - `GET /projects` - 프로젝트 목록
@@ -240,6 +268,7 @@ docker exec -it <container_id> redis-cli ping
 
 - **AI_MEMORY.md**: 프로젝트 현황, 완료된 작업, 다음 목표
 - **CLAUDE.md**: Claude Code 작업 가이드, 코딩 표준
+- **DEPLOY_GUIDE.md**: Oracle Cloud 배포 가이드
 - **schema.sql**: 전체 DB 스키마 정의
 
 ---
@@ -270,6 +299,36 @@ MIT License
 **hsm9411**
 - Email: haeha2e@gmail.com
 - GitHub: https://github.com/hsm9411
+
+---
+
+---
+
+## 🏗️ 아키텍처
+
+### 현재 구조 (Monolithic)
+
+```
+┌────────────────────────────────────────┐
+│     NestJS Application (Port 3000)     │
+│  ┌──────────────────────────────────┐  │
+│  │  Auth  │ Projects │ Posts │ ... │  │
+│  └──────────────────────────────────┘  │
+│              ↓        ↓                │
+│        PostgreSQL   Redis              │
+│       (Supabase)  (Cache)              │
+└────────────────────────────────────────┘
+```
+
+**장점:**
+- ✅ 간단한 개발/배포
+- ✅ 비용 효율적 (1개 서버)
+- ✅ 빠른 개발 속도
+
+**포트폴리오 프로젝트에 적합:**
+- 트래픽이 많지 않음
+- 모든 기능이 밀접하게 연관됨
+- 1명의 개발자가 관리
 
 ---
 
