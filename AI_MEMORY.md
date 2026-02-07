@@ -391,19 +391,19 @@ Auth 모듈이 성공적으로 구현되었으며, 알려진 이슈는 없습니
 - [x] ~~Redis 서버 실행~~ ✅ 완료
 - [x] ~~개발 서버 실행 테스트~~ ✅ 완료
 
-### 배포 준비 (다음 세션에서 진행)
-- [ ] **GitHub Secrets 설정** (ORACLE_SSH_KEY, ORACLE_HOST, ORACLE_USER)
-- [ ] **Oracle Cloud 서버 초기 설정** (setup-server.sh 실행)
-- [ ] **서버 .env 파일 설정** (프로덕션 환경 변수)
-- [ ] **GitHub Container Registry 로그인**
-- [ ] **Supabase DB 스키마 적용** (schema.sql 실행)
-- [ ] **OAuth Client ID/Secret 설정** (Google, GitHub)
-- [ ] **배포 테스트** (develop → main)
+### 배포 준비
+- [x] ~~**GitHub Secrets 설정**~~ ✅ 완료
+- [x] ~~**Oracle Cloud 서버 초기 설정**~~ ✅ 완료
+- [x] ~~**서버 .env 파일 설정**~~ ✅ 완료
+- [x] ~~**GitHub Container Registry 로그인**~~ ✅ 완료
+- [x] ~~**Supabase DB 스키마 적용**~~ ✅ 완료 (이미 존재)
+- [ ] **배포 테스트 완료 확인** (다음 세션 첫 작업)
+- [ ] **API 테스트** (Swagger, curl)
+- [ ] **OAuth Client ID/Secret 설정** (Google, GitHub) - 선택사항
 
 ### Supabase 설정
-- [ ] **SQL Editor에서 schema.sql 실행**
-  - https://supabase.com/dashboard/project/protfolio/sql
-  - 전체 스키마 생성 확인
+- [x] ~~**SQL Editor에서 schema.sql 실행**~~ ✅ 완료
+- [x] ~~**비밀번호 변경**~~ ✅ 완료 (N4xSSg9BKvpp3hq8)
 - [ ] **테스트 데이터 추가** (선택사항)
 
 ---
@@ -479,4 +479,55 @@ Auth 모듈이 성공적으로 구현되었으며, 알려진 이슈는 없습니
 
 ---
 
-**마지막 업데이트**: 2026-02-07 (CI/CD 및 배포 구성 완료)
+---
+
+### 2026-02-07 (배포 준비 완료)
+
+#### 배포 인프라 설정 완료 ✅
+- ✅ **GitHub Secrets 설정**
+  - ORACLE_SSH_KEY: SSH private key 등록
+  - ORACLE_HOST: 158.180.75.205
+  - ORACLE_USER: ubuntu
+
+- ✅ **Oracle Cloud 서버 초기 설정**
+  - Docker & Docker Compose 설치
+  - 방화벽 설정 (포트 3000, 3001, 80, 443)
+  - 프로젝트 디렉토리 생성 (~/portfolio-backend, ~/portfolio-backend-dev)
+  - .env 템플릿 생성
+
+- ✅ **Supabase DB 스키마**
+  - 이미 적용 완료 확인
+  - 6개 테이블 모두 존재 (users, projects, posts, comments, likes, views)
+
+- ✅ **서버 환경 변수 설정**
+  - ~/portfolio-backend/.env 생성
+  - DATABASE_URL, JWT_SECRET 등 설정
+  - 프로덕션 환경 변수 적용
+
+- ✅ **GitHub Container Registry 로그인**
+  - 서버에서 GHCR 로그인 완료
+  - Docker 이미지 pull 가능
+
+- ✅ **보안 문제 해결**
+  - Supabase 비밀번호 노출 발견 (NEXT_TASKS.md)
+  - 즉시 비밀번호 변경: `N4xSSg9BKvpp3hq8`
+  - NEXT_TASKS.md에서 민감한 정보 제거
+  - 로컬 및 서버 .env 파일 업데이트
+
+- ⏳ **배포 테스트 (진행 중)**
+  - deploy.sh 수정: IMAGE_TAG 환경 변수 지원
+  - workflow 수정: develop 브랜치는 develop 태그 사용
+  - GitHub Actions 재실행 중
+
+#### 발견된 문제 및 해결
+1. **Docker 이미지 태그 문제**
+   - 문제: develop 브랜치가 `latest` 태그를 찾으려고 시도
+   - 해결: deploy.sh에 IMAGE_TAG 환경 변수 추가, workflow 수정
+
+2. **보안 문제**
+   - 문제: NEXT_TASKS.md에 Supabase 비밀번호 노출
+   - 해결: 비밀번호 즉시 변경, 문서에서 제거
+
+---
+
+**마지막 업데이트**: 2026-02-07 (배포 준비 완료, 배포 테스트 진행 중)
