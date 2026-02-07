@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo create:*)",
+      "Bash(winget install:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(npx nest generate module:*)",
+      "Bash(npx nest generate:*)",
+      "Bash(docker run:*)",
+      "Bash(docker exec:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(Get-Content \"C:\\\\Users\\\\hasun\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--hsm9411-portfolio-backend\\\\tasks\\\\b5cf681.output\" -Tail 50)"
     ]
   }
 }

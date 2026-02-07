@@ -15,9 +15,9 @@ export interface GithubProfile {
 export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
   constructor(private configService: ConfigService) {
     super({
-      clientID: configService.get<string>('GITHUB_CLIENT_ID'),
-      clientSecret: configService.get<string>('GITHUB_CLIENT_SECRET'),
-      callbackURL: configService.get<string>('GITHUB_CALLBACK_URL'),
+      clientID: configService.get<string>('GITHUB_CLIENT_ID') || '',
+      clientSecret: configService.get<string>('GITHUB_CLIENT_SECRET') || '',
+      callbackURL: configService.get<string>('GITHUB_CALLBACK_URL') || '',
       scope: ['user:email'],
     });
   }
@@ -33,8 +33,8 @@ export class GithubStrategy extends PassportStrategy(Strategy, 'github') {
     const githubProfile: GithubProfile = {
       id,
       email: emails?.[0]?.value || `${username}@github.local`,
-      name: username,
-      avatarUrl: photos?.[0]?.value || null,
+      name: username || 'github-user',
+      avatarUrl: photos?.[0]?.value || '',
       githubUrl: profileUrl,
     };
 

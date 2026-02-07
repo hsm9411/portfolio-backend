@@ -17,10 +17,10 @@ import { JwtAuthGuard, OptionalJwtAuthGuard } from './guards';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret: configService.get<string>('JWT_SECRET') || 'default-secret',
         signOptions: {
           expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
-        },
+        } as any,
       }),
     }),
   ],
