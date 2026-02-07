@@ -125,9 +125,11 @@ id, target_type, target_id, user_id, ip_address
 
 ---
 
-## ✅ 완료된 작업 (2026-02-07)
+## ✅ 완료된 작업
 
-### 1. 프로젝트 초기화
+### 2026-02-07 (프로젝트 초기화)
+
+#### 1. 프로젝트 초기화
 - ✅ NestJS CLI로 프로젝트 생성
 - ✅ 패키지 설치:
   - TypeORM + PostgreSQL
@@ -137,59 +139,81 @@ id, target_type, target_id, user_id, ip_address
   - Prometheus
   - Class-validator/transformer
 
-### 2. 설정 파일
+#### 2. 설정 파일
 - ✅ `.env.example`: 환경 변수 템플릿
 - ✅ `.gitignore`: Git 무시 파일
 - ✅ `config/database.config.ts`: TypeORM 설정
 - ✅ `config/redis.config.ts`: Redis 캐시 설정
 
-### 3. 데이터베이스
+#### 3. 데이터베이스
 - ✅ `schema.sql`: DB 초기화 SQL 작성
 - ✅ Entity 생성 (User, Project, Post, Comment, Like, View)
 - ✅ 인덱스 최적화 (Full-text search 포함)
 - ✅ RLS (Row Level Security) 정책
 
-### 4. 기본 설정
+#### 4. 기본 설정
 - ✅ `main.ts`: Swagger, CORS, Validation Pipe 설정
 - ✅ `app.module.ts`: TypeORM, Redis, Prometheus 통합
+
+#### 5. Git 설정
+- ✅ Git 저장소 초기화
+- ✅ GitHub 레포 생성 및 연결 (https://github.com/hsm9411/portfolio-backend)
+- ✅ main 브랜치 push
+- ✅ develop 브랜치 생성 및 push
+
+---
+
+### 2026-02-07 (Auth 모듈 구현)
+
+#### Auth 모듈 완료 ✅
+- ✅ **DTO**: RegisterDto, LoginDto, AuthResponseDto
+- ✅ **Strategies**: JwtStrategy, GoogleStrategy, GithubStrategy
+- ✅ **Guards**: JwtAuthGuard, OptionalJwtAuthGuard
+- ✅ **Service**:
+  - Local 회원가입/로그인 (bcrypt 비밀번호 해싱)
+  - Google OAuth 사용자 처리
+  - GitHub OAuth 사용자 처리
+  - JWT 토큰 생성
+- ✅ **Controller**:
+  - POST /auth/register - 회원가입
+  - POST /auth/login - 로그인
+  - GET /auth/me - 현재 사용자 정보 조회
+  - GET /auth/google - Google OAuth 시작
+  - GET /auth/google/callback - Google OAuth 콜백
+  - GET /auth/github - GitHub OAuth 시작
+  - GET /auth/github/callback - GitHub OAuth 콜백
+- ✅ **Module**: 모든 Provider 등록 및 export
 
 ---
 
 ## 🚧 다음 작업 (우선순위)
 
-### Task #2: Auth 모듈 구현 (진행 예정)
-- [ ] Local 회원가입/로그인 (JWT)
-- [ ] Google OAuth 2.0
-- [ ] GitHub OAuth
-- [ ] JWT Strategy & Guard
-- [ ] 사용자 정보 조회 API
-
-### Task #3: Projects 모듈 구현
+### Task #1: Projects 모듈 구현
 - [ ] 프로젝트 CRUD
 - [ ] 조회수 카운터 (Redis)
 - [ ] 좋아요 기능
 - [ ] 필터링 (status, featured, tags)
 - [ ] 검색 (Full-text)
 
-### Task #4: Posts 모듈 구현
+### Task #2: Posts 모듈 구현
 - [ ] 블로그 글 CRUD
 - [ ] 카테고리/태그 필터링
 - [ ] 조회수 카운터
 - [ ] 좋아요 기능
 - [ ] 마크다운 파싱 (읽기 시간 계산)
 
-### Task #5: Comments 모듈 구현
+### Task #3: Comments 모듈 구현
 - [ ] 댓글 CRUD
 - [ ] 대댓글 (parent_id)
 - [ ] 익명/로그인 구분
 - [ ] 소프트 삭제 (is_deleted)
 
-### Task #6: Likes 모듈 구현
+### Task #4: Likes 모듈 구현
 - [ ] 좋아요 토글 (추가/취소)
 - [ ] 중복 방지 (user_id 또는 IP)
 - [ ] 카운터 동기화
 
-### Task #7: Docker 및 배포
+### Task #5: Docker 및 배포
 - [ ] Dockerfile 작성
 - [ ] docker-compose.yml (백엔드 + Redis)
 - [ ] nginx 설정 (API Gateway)
@@ -286,7 +310,9 @@ FRONTEND_URL=http://localhost:5173
 
 ## 🐛 알려진 이슈
 
-### 없음 (프로젝트 초기 단계)
+### 없음
+
+Auth 모듈이 성공적으로 구현되었으며, 알려진 이슈는 없습니다.
 
 ---
 
@@ -312,11 +338,22 @@ FRONTEND_URL=http://localhost:5173
 
 ## 📌 다음 세션 시작 전 체크리스트
 
-- [ ] Task #2 (Auth 모듈) 상태 확인
-- [ ] 환경 변수 설정 완료 확인
-- [ ] Supabase DB 스키마 적용 확인
+- [x] ~~Task #2 (Auth 모듈) 상태 확인~~ ✅ 완료
+- [ ] 환경 변수 설정 완료 확인 (.env 파일 생성)
+- [ ] Supabase DB 스키마 적용 확인 (schema.sql 실행)
 - [ ] Redis 서버 실행 확인
+- [ ] OAuth Client ID/Secret 설정 (Google, GitHub)
+- [ ] 개발 서버 실행 테스트 (npm run start:dev)
 
 ---
 
-**마지막 업데이트**: 2026-02-07 (기본 설정 완료)
+## 📦 다음 구현 우선순위
+
+1. **Projects 모듈** - 프로젝트 포트폴리오 CRUD
+2. **Posts 모듈** - 블로그 글 CRUD
+3. **Comments 모듈** - 댓글/대댓글
+4. **Likes 모듈** - 좋아요 기능
+
+---
+
+**마지막 업데이트**: 2026-02-07 (Auth 모듈 완료)
