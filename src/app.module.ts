@@ -8,6 +8,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { TerminusModule } from '@nestjs/terminus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -40,6 +41,8 @@ import { AppService } from './app.service';
 
     // Health Check
     TerminusModule,
+
+    AuthModule,
 
     // Feature Modules (TODO: 추가 예정)
     // AuthModule,
