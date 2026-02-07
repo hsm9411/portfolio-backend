@@ -44,3 +44,6 @@ ormconfig.json
 
 # Claude local settings
 .claude/settings.local.json
+
+# Deployment information (contains sensitive data)
+DEPLOYMENT.md
