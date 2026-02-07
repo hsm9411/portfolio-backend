@@ -68,7 +68,7 @@ nano ~/portfolio-backend/.env
 
 **.env 내용 (서버용):**
 ```env
-DATABASE_URL=postgresql://postgres.vcegupzlmopajpqxttfo:H5xMZzT1dgnIEboL@aws-1-ap-south-1.pooler.supabase.com:5432/postgres?schema=portfolio
+DATABASE_URL=postgresql://postgres.<project-ref>:<YOUR-PASSWORD>@<your-host>.supabase.com:5432/postgres?schema=portfolio
 JWT_SECRET=portfolio_jwt_production_secret_2026_super_secure
 JWT_EXPIRES_IN=7d
 
