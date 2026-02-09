@@ -5,17 +5,26 @@ import {
   Body,
   UseGuards,
   Req,
-  Res,
-  HttpStatus,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, AuthResponseDto } from './dto';
 import { JwtAuthGuard } from './guards';
 import { User } from '../../entities/user/user.entity';
 
+/**
+ * Auth Controller (Supabase OAuth 전환)
+ *
+ * OAuth는 Frontend → Supabase Auth에서 직접 처리
+ * Backend는 Local 로그인과 JWT 검증만 담당
+ *
+ * OAuth Flow:
+ * 1. Frontend: supabase.auth.signInWithOAuth({ provider: 'google' })
+ * 2. Supabase: Google OAuth 처리 → JWT 발급
+ * 3. Frontend: JWT를 Backend API 호출 시 Header에 포함
+ * 4. Backend: SupabaseJwtStrategy가 JWT 검증 & portfolio.users 동기화
+ */
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
@@ -23,9 +32,11 @@ export class AuthController {
 
   /**
    * 회원가입 (Local)
+   *
+   * Note: OAuth 사용자는 Supabase에서 자동 생성
    */
   @Post('register')
-  @ApiOperation({ summary: '회원가입' })
+  @ApiOperation({ summary: '회원가입 (Local)' })
   @ApiResponse({
     status: 201,
     description: '회원가입 성공',
@@ -38,9 +49,11 @@ export class AuthController {
 
   /**
    * 로그인 (Local)
+   *
+   * Note: OAuth 사용자는 Frontend에서 Supabase 로그인
    */
   @Post('login')
-  @ApiOperation({ summary: '로그인' })
+  @ApiOperation({ summary: '로그인 (Local)' })
   @ApiResponse({
     status: 200,
     description: '로그인 성공',
@@ -53,6 +66,8 @@ export class AuthController {
 
   /**
    * 현재 사용자 정보 조회
+   *
+   * Supabase JWT 또는 Local JWT 모두 지원
    */
   @Get('me')
   @UseGuards(JwtAuthGuard)
@@ -65,56 +80,22 @@ export class AuthController {
   }
 
   /**
-   * Google OAuth 로그인 시작
+   * OAuth 사용자 동기화 엔드포인트 (선택)
+   *
+   * Frontend에서 Supabase OAuth 완료 후 호출하여
+   * portfolio.users와 강제 동기화 (필요시)
    */
-  @Get('google')
-  @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: 'Google OAuth 로그인 시작' })
-  async googleLogin() {
-    // Guard가 Google OAuth 페이지로 리다이렉트
-  }
-
-  /**
-   * Google OAuth 콜백
-   */
-  @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: 'Google OAuth 콜백' })
-  async googleCallback(@Req() req: any, @Res() res: Response) {
-    const profile = req.user;
-    const authResponse = await this.authService.handleGoogleLogin(profile);
-
-    // 프론트엔드로 리다이렉트 (토큰 포함)
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const redirectUrl = `${frontendUrl}/auth/callback?token=${authResponse.accessToken}`;
-
-    return res.redirect(redirectUrl);
-  }
-
-  /**
-   * GitHub OAuth 로그인 시작
-   */
-  @Get('github')
-  @UseGuards(AuthGuard('github'))
-  @ApiOperation({ summary: 'GitHub OAuth 로그인 시작' })
-  async githubLogin() {
-    // Guard가 GitHub OAuth 페이지로 리다이렉트
-  }
-
-  /**
-   * GitHub OAuth 콜백
-   */
-  @Get('github/callback')
-  @UseGuards(AuthGuard('github'))
-  @ApiOperation({ summary: 'GitHub OAuth 콜백' })
-  async githubCallback(@Req() req: any, @Res() res: Response) {
-    const profile = req.user;
-    const authResponse = await this.authService.handleGithubLogin(profile);
-
-    // 프론트엔드로 리다이렉트 (토큰 포함)
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const redirectUrl = `${frontendUrl}/auth/callback?token=${authResponse.accessToken}`;
-
-    return res.redirect(redirectUrl);
+  @Post('sync-oauth-user')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'OAuth 사용자 동기화 (선택)' })
+  @ApiResponse({ status: 200, description: '동기화 성공' })
+  async syncOAuthUser(@Req() req: Request & { user: User }) {
+    // SupabaseJwtStrategy가 이미 동기화 처리
+    // 이 엔드포인트는 명시적 동기화가 필요한 경우만 사용
+    return {
+      message: '사용자 정보 동기화 완료',
+      user: req.user,
+    };
   }
 }

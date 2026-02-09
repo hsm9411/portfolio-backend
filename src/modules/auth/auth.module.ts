@@ -6,9 +6,19 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User } from '../../entities/user/user.entity';
-import { JwtStrategy, GoogleStrategy, GithubStrategy } from './strategies';
+import { JwtStrategy, SupabaseJwtStrategy } from './strategies';
 import { JwtAuthGuard, OptionalJwtAuthGuard } from './guards';
 
+/**
+ * Auth Module (Supabase OAuth 전환)
+ *
+ * Strategies:
+ * - JwtStrategy: Local 로그인용 (email/password)
+ * - SupabaseJwtStrategy: Supabase OAuth용 (Google/GitHub)
+ *
+ * OAuth는 Frontend → Supabase Auth에서 처리
+ * Backend는 JWT 검증만 담당
+ */
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
@@ -27,9 +37,8 @@ import { JwtAuthGuard, OptionalJwtAuthGuard } from './guards';
   controllers: [AuthController],
   providers: [
     AuthService,
-    JwtStrategy,
-    GoogleStrategy,
-    GithubStrategy,
+    JwtStrategy,          // Local 로그인용
+    SupabaseJwtStrategy,  // Supabase OAuth용
     JwtAuthGuard,
     OptionalJwtAuthGuard,
   ],

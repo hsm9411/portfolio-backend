@@ -10,8 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from '../../entities/user/user.entity';
 import { RegisterDto, LoginDto, AuthResponseDto } from './dto';
-import { GoogleProfile } from './strategies/google.strategy';
-import { GithubProfile } from './strategies/github.strategy';
+import { OAuthUser } from './interfaces/oauth-user.interface';
 
 @Injectable()
 export class AuthService {
@@ -113,66 +112,39 @@ export class AuthService {
   }
 
   /**
-   * Google OAuth 사용자 처리
+   * OAuth 사용자 처리 (Google, GitHub 공통)
+   *
+   * Flow:
+   * 1. providerId로 기존 사용자 조회
+   * 2. 없으면 신규 사용자 생성
+   * 3. JWT 토큰 발급
+   *
+   * @param oauthUser - OAuth Provider에서 받은 사용자 정보
    */
-  async handleGoogleLogin(profile: GoogleProfile): Promise<AuthResponseDto> {
-    const { id, email, name, picture } = profile;
+  async handleOAuthLogin(oauthUser: OAuthUser): Promise<AuthResponseDto> {
+    const { provider, providerId, email, name, picture } = oauthUser;
 
     // 기존 사용자 조회
     let user = await this.userRepository.findOne({
-      where: { provider: 'google', providerId: id },
+      where: { provider, providerId },
     });
 
-    // 새 사용자 생성
+    // 신규 사용자 생성
     if (!user) {
       user = this.userRepository.create({
         email,
         nickname: name,
         avatarUrl: picture,
-        provider: 'google',
-        providerId: id,
+        provider,
+        providerId,
+        // GitHub의 경우 프로필 URL 자동 설정
+        githubUrl: provider === 'github' ? `https://github.com/${name}` : undefined,
       });
 
       await this.userRepository.save(user);
-    }
-
-    // JWT 토큰 생성
-    const accessToken = this.generateToken(user);
-
-    return {
-      accessToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname,
-        avatarUrl: user.avatarUrl,
-        isAdmin: user.isAdmin,
-      },
-    };
-  }
-
-  /**
-   * GitHub OAuth 사용자 처리
-   */
-  async handleGithubLogin(profile: GithubProfile): Promise<AuthResponseDto> {
-    const { id, email, name, avatarUrl, githubUrl } = profile;
-
-    // 기존 사용자 조회
-    let user = await this.userRepository.findOne({
-      where: { provider: 'github', providerId: id },
-    });
-
-    // 새 사용자 생성
-    if (!user) {
-      user = this.userRepository.create({
-        email,
-        nickname: name,
-        avatarUrl,
-        provider: 'github',
-        providerId: id,
-        githubUrl,
-      });
-
+    } else {
+      // 기존 사용자 정보 업데이트 (프로필 사진 등)
+      user.avatarUrl = picture || user.avatarUrl;
       await this.userRepository.save(user);
     }
 
