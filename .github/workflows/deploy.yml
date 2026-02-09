@@ -128,6 +128,16 @@ jobs:
           # Create dev directory
           ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev"
 
+          # Copy .env from production to development (if not exists)
+          ssh ${USER}@${HOST} "if [ ! -f ~/portfolio-backend-dev/.env ] && [ -f ~/portfolio-backend/.env ]; then \
+            cp ~/portfolio-backend/.env ~/portfolio-backend-dev/.env; \
+            echo '✅ .env file copied from production'; \
+          elif [ -f ~/portfolio-backend-dev/.env ]; then \
+            echo '✅ .env file already exists'; \
+          else \
+            echo '⚠️  WARNING: No .env file found. Please create it manually.'; \
+          fi"
+
           # Copy files
           scp docker-compose.yml ${USER}@${HOST}:~/portfolio-backend-dev/
           scp deploy.sh ${USER}@${HOST}:~/portfolio-backend-dev/
