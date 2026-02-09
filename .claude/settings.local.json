@@ -17,7 +17,8 @@
       "Bash(npm run start:dev:*)",
       "Bash(Get-Content \"C:\\\\Users\\\\hasun\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--hsm9411-portfolio-backend\\\\tasks\\\\b5cf681.output\" -Tail 50)",
       "Bash(chmod:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(git filter-branch:*)"
     ]
   }
 }
