@@ -31,7 +31,7 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       // Supabase JWT Secret (Dashboard → Settings → API → JWT Secret)
-      secretOrKey: configService.get<string>('SUPABASE_JWT_SECRET'),
+      secretOrKey: configService.get<string>('SUPABASE_JWT_SECRET') || 'fallback-secret',
     });
   }
 
