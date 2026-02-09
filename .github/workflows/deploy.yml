@@ -158,8 +158,21 @@ jobs:
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           echo "Waiting for development application to start..."
-          sleep 10
+          sleep 20
 
-          ssh ${USER}@${HOST} "curl -f http://localhost:3001 || exit 1"
+          echo "=== Container Status ==="
+          ssh ${USER}@${HOST} "docker ps | grep portfolio"
+
+          echo ""
+          echo "=== Application Logs ==="
+          ssh ${USER}@${HOST} "docker logs portfolio-backend-dev --tail=100"
+
+          echo ""
+          echo "=== Redis Logs ==="
+          ssh ${USER}@${HOST} "docker logs portfolio-redis-dev --tail=20"
+
+          echo ""
+          echo "=== Testing Health Check ==="
+          ssh ${USER}@${HOST} "curl -f http://localhost:3001/health || curl -f http://localhost:3001 || exit 1"
 
           echo "✅ Development deployment verified!"
