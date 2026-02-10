@@ -1,9 +1,8 @@
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ScheduleModule } from '@nestjs/schedule';
 import { Post } from '../entities/post';
 import { Project } from '../entities/project';
-import { ViewCountService, TasksService } from './services';
+import { ViewCountService } from './services';
 
 /**
  * Common Module
@@ -13,11 +12,8 @@ import { ViewCountService, TasksService } from './services';
  */
 @Global()
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Post, Project]),
-    ScheduleModule.forRoot(),
-  ],
-  providers: [ViewCountService, TasksService],
+  imports: [TypeOrmModule.forFeature([Post, Project])],
+  providers: [ViewCountService],
   exports: [ViewCountService],
 })
 export class CommonModule {}
