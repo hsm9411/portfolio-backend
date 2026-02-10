@@ -1,24 +1,32 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
+} from 'typeorm';
 
-@Entity('likes', { schema: 'portfolio' })
+export enum LikeTargetType {
+  PROJECT = 'project',
+  POST = 'post',
+}
+
+@Entity('likes')
+@Index(['targetType', 'targetId', 'userId'], { unique: true })
 export class Like {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // Polymorphic relationship
-  @Column({ name: 'target_type' })
-  targetType: string; // 'project', 'post', 'comment'
+  // Polymorphic 관계
+  @Column({ type: 'enum', enum: LikeTargetType })
+  targetType: LikeTargetType;
 
-  @Column({ name: 'target_id', type: 'uuid' })
+  @Column('uuid')
   targetId: string;
 
-  // 로그인/익명 구분
-  @Column({ name: 'user_id', type: 'uuid', nullable: true })
+  @Column('uuid')
   userId: string;
 
-  @Column({ name: 'ip_address', nullable: true })
-  ipAddress: string;
-
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt: Date;
 }

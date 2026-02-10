@@ -4,62 +4,49 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
-@Entity('posts', { schema: 'portfolio' })
+@Entity('posts')
+@Index(['slug'], { unique: true })
+@Index(['tags'], { using: 'GIN' })
 export class Post {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ unique: true })
+  slug: string;
+
   @Column()
   title: string;
 
-  @Column({ type: 'text' })
+  @Column('text')
+  content: string;
+
+  @Column({ nullable: true })
   summary: string;
 
-  @Column({ type: 'text' })
-  content: string; // Markdown
-
-  @Column({ name: 'thumbnail_url', nullable: true })
-  thumbnailUrl: string;
-
-  @Column()
-  category: string; // 'tutorial', 'essay', 'review', 'news'
-
-  @Column({ type: 'text', array: true, default: [] })
+  @Column('text', { array: true, default: [] })
   tags: string[];
 
-  @Column({ name: 'is_published', default: true })
-  isPublished: boolean;
-
-  @Column({ name: 'view_count', default: 0 })
+  @Column({ default: 0 })
   viewCount: number;
 
-  @Column({ name: 'like_count', default: 0 })
+  @Column({ default: 0 })
   likeCount: number;
 
-  @Column({ name: 'comment_count', default: 0 })
-  commentCount: number;
-
-  @Column({ name: 'reading_time', nullable: true })
-  readingTime: number; // minutes
-
-  // Denormalized author info
-  @Column({ name: 'author_id', type: 'uuid' })
+  @Column()
   authorId: string;
 
-  @Column({ name: 'author_nickname' })
+  @Column()
   authorNickname: string;
 
-  @Column({ name: 'author_avatar_url', nullable: true })
+  @Column({ nullable: true })
   authorAvatarUrl: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn()
   updatedAt: Date;
-
-  @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
-  publishedAt: Date;
 }

@@ -2,25 +2,17 @@ import { Injectable, ExecutionContext } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 /**
- * Optional JWT Guard
- *
- * 로그인한 사용자는 인증 처리하고,
- * 로그인하지 않은 사용자(익명)도 허용합니다.
- *
- * 사용 예시: 좋아요, 댓글 (로그인/익명 모두 가능)
+ * 선택적 JWT 인증 Guard
+ * 
+ * - 토큰이 있으면 검증하여 user 주입
+ * - 토큰이 없으면 그냥 통과 (user는 undefined)
+ * 
+ * 사용처: 댓글 조회 (로그인 시 익명 마스킹 해제)
  */
 @Injectable()
 export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
-  handleRequest(err: any, user: any) {
-    // 에러가 있거나 사용자가 없어도 null 반환 (에러 던지지 않음)
-    if (err || !user) {
-      return null;
-    }
+  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+    // 에러가 있거나 user가 없어도 통과
     return user;
-  }
-
-  canActivate(context: ExecutionContext) {
-    // 항상 true를 반환하여 요청을 허용
-    return super.canActivate(context) as Promise<boolean> | boolean;
   }
 }
