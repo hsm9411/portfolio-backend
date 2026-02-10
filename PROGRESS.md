@@ -81,11 +81,27 @@ Key: view:count:{type}:{id}
 
 ---
 
-## 🚀 다음 작업
+## 🚀 배포 후 필수 작업
 
-1. Cron Job: Redis → DB 주기적 동기화
-2. 프론트엔드 연동 (Next.js + Supabase SDK)
-3. API 문서 개선 (Swagger Examples)
+### 즉시 실행
+1. **GIN 인덱스 생성** (MIGRATIONS.md 참고)
+   ```sql
+   CREATE INDEX IF NOT EXISTS idx_posts_tags ON posts USING GIN (tags);
+   ```
+
+2. **환경변수 확인**
+   - CORS_ORIGINS: 실제 프론트엔드 도메인
+   - NODE_ENV=production
+
+3. **Redis 동기화 Cron Job 확인**
+   - 매일 자정 자동 실행
+
+### 선택 사항
+- 테스트 코드 작성
+- 에러 모니터링 (Sentry)
+- Admin API 구현
+
+자세한 내용은 **DEPLOYMENT_CHECKLIST.md** 참고
 
 ---
 

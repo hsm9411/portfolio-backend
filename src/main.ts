@@ -10,28 +10,38 @@ async function bootstrap() {
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', true);
 
-  // CORS 설정 (Vercel 도메인만 허용)
-  const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [
-    'http://localhost:5173',
-    'http://localhost:3000',
-  ];
+  // CORS 설정
+  const corsOrigins = process.env.CORS_ORIGINS;
+  
+  if (corsOrigins === '*') {
+    // 개발 환경: 모든 origin 허용
+    app.enableCors({
+      origin: true,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    });
+  } else {
+    // 프로덕션: 특정 도메인만 허용
+    const allowedOrigins = corsOrigins?.split(',') || [
+      'http://localhost:5173',
+      'http://localhost:3000',
+    ];
 
-  app.enableCors({
-    origin: (origin, callback) => {
-      // Origin이 없는 경우 (same-origin, Postman 등)
-      if (!origin) return callback(null, true);
-
-      // 허용된 도메인 체크
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+    app.enableCors({
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    });
+  }
 
   // Global Validation Pipe
   app.useGlobalPipes(
