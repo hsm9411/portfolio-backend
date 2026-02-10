@@ -1,4 +1,4 @@
-import { Request } from 'express';
+import type { Request } from 'express';
 
 /**
  * Cloudflare Proxy 환경에서 실제 클라이언트 IP 추출
