@@ -1,0 +1,147 @@
+# NestJS 모듈 자동 생성 Workflow
+# 사용법: claude workflow create-module --module=projects
+
+name: Create NestJS Module
+description: "새 NestJS 모듈을 처음부터 끝까지 자동 생성 (구조 → 코드 → 테스트 → 문서)"
+
+# 변수 정의
+variables:
+  module_name:
+    type: string
+    required: true
+    description: "모듈 이름 (예: projects, posts, comments)"
+
+# 실행 단계
+steps:
+  # Step 1: 구조 설계 (Architect)
+  - name: Design Architecture
+    agent: architect
+    prompt: |
+      {module_name} 모듈의 전체 구조를 설계해주세요.
+      
+      포함할 내용:
+      - 폴더 구조
+      - 파일 목록
+      - 모듈 의존성
+      - 데이터베이스 Entity 연결
+    
+    output: .claude/temp/{module_name}_structure.md
+  
+  # Step 2: DTO 구현 (Developer)
+  - name: Implement DTOs
+    agent: developer
+    context: .claude/temp/{module_name}_structure.md
+    prompt: |
+      {module_name} 모듈의 모든 DTO를 구현해주세요:
+      - CreateDto
+      - UpdateDto
+      - GetDto (페이징, 필터링)
+      - ResponseDto
+      
+      class-validator 검증 포함
+    
+    output: src/modules/{module_name}/dto/
+  
+  # Step 3: Service 구현 (Developer)
+  - name: Implement Service
+    agent: developer
+    context:
+      - .claude/temp/{module_name}_structure.md
+      - src/modules/{module_name}/dto/
+    prompt: |
+      {module_name} Service를 구현해주세요:
+      - findAll (페이징, 필터링, 검색)
+      - findOne
+      - create (관리자만)
+      - update (작성자/관리자)
+      - remove (작성자/관리자)
+      
+      TypeORM Repository 패턴 사용
+      에러 처리 포함
+    
+    output: src/modules/{module_name}/{module_name}.service.ts
+  
+  # Step 4: Controller 구현 (Developer)
+  - name: Implement Controller
+    agent: developer
+    context:
+      - src/modules/{module_name}/{module_name}.service.ts
+      - src/modules/{module_name}/dto/
+    prompt: |
+      {module_name} Controller를 구현해주세요:
+      - GET, POST, PATCH, DELETE 엔드포인트
+      - JwtAuthGuard 적용
+      - Swagger 문서화 (@ApiTags, @ApiOperation, @ApiResponse)
+      
+      NestJS 표준 패턴 준수
+    
+    output: src/modules/{module_name}/{module_name}.controller.ts
+  
+  # Step 5: Module 구현 (Developer)
+  - name: Implement Module
+    agent: developer
+    context:
+      - src/modules/{module_name}/{module_name}.controller.ts
+      - src/modules/{module_name}/{module_name}.service.ts
+    prompt: |
+      {module_name} Module을 구현해주세요:
+      - TypeORM Entity import
+      - Controller, Service 등록
+      - 필요한 의존성 import
+    
+    output: src/modules/{module_name}/{module_name}.module.ts
+  
+  # Step 6: 코드 리뷰 (Reviewer)
+  - name: Code Review
+    agent: reviewer
+    context: src/modules/{module_name}/
+    prompt: |
+      {module_name} 모듈 전체 코드를 리뷰해주세요.
+      
+      체크 포인트:
+      - NestJS 패턴 준수
+      - TypeORM 매핑 정확성
+      - DTO validation
+      - 에러 처리
+      - Swagger 문서화
+    
+    output: .claude/temp/{module_name}_review.md
+  
+  # Step 7: 테스트 작성 (Tester)
+  - name: Write Tests
+    agent: tester
+    context:
+      - src/modules/{module_name}/{module_name}.service.ts
+      - src/modules/{module_name}/{module_name}.controller.ts
+    prompt: |
+      {module_name} 모듈의 테스트를 작성해주세요:
+      - Service 단위 테스트
+      - Controller 테스트
+      - E2E 테스트 시나리오
+      
+      Jest + TypeORM mocking
+    
+    output: src/modules/{module_name}/__tests__/
+  
+  # Step 8: 문서화 (Doc Writer)
+  - name: Write Documentation
+    agent: doc_writer
+    context:
+      - src/modules/{module_name}/
+      - .claude/temp/{module_name}_structure.md
+    prompt: |
+      {module_name} 모듈의 문서를 작성해주세요:
+      - API 엔드포인트 설명
+      - 요청/응답 예시
+      - 사용 가이드
+      
+      README.md에 추가할 섹션으로 작성
+    
+    output: .claude/temp/{module_name}_docs.md
+
+# 완료 후 실행할 명령어
+post_steps:
+  - echo "✅ {module_name} 모듈 생성 완료!"
+  - echo "📁 파일 위치: src/modules/{module_name}/"
+  - echo "📝 리뷰: .claude/temp/{module_name}_review.md"
+  - echo "📖 문서: .claude/temp/{module_name}_docs.md"

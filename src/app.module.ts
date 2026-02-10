@@ -9,6 +9,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { ProjectsModule } from './modules/projects/projects.module';
 
 @Module({
   imports: [
@@ -43,10 +44,9 @@ import { AuthModule } from './modules/auth/auth.module';
     TerminusModule,
 
     AuthModule,
+    ProjectsModule,
 
     // Feature Modules (TODO: 추가 예정)
-    // AuthModule,
-    // ProjectsModule,
     // PostsModule,
     // CommentsModule,
     // LikesModule,

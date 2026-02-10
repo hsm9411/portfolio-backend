@@ -19,20 +19,21 @@
 | **Auth 모듈** | ✅ 완료 | Supabase OAuth (Google/GitHub) + Local 로그인 |
 | **DB Schema** | ✅ 완료 | 6개 테이블, Full-text 검색, Polymorphic 관계 |
 | **CI/CD** | ✅ 완료 | GitHub Actions → Oracle Cloud 자동 배포 |
-| **Projects 모듈** | 🔄 진행 예정 | 포트폴리오 프로젝트 CRUD |
+| **Projects 모듈** | ✅ 완료 | 포트폴리오 프로젝트 CRUD |
 | **Posts 모듈** | ⏳ 대기 | 기술 블로그 글 관리 |
 | **Comments/Likes** | ⏳ 대기 | 소셜 기능 |
 
-**최근 작업 (2026-02-09):**
+**최근 작업 (2026-02-10):**
 - ✅ Supabase OAuth 전환 완료 (Passport.js → Supabase Auth)
 - ✅ User Entity supabase_user_id 컬럼 추가
 - ✅ SupabaseJwtStrategy 구현
-- 🔄 배포 테스트 진행 중
+- ✅ Projects 모듈 CRUD 구현 완료
 
 **다음 작업:**
-1. Projects 모듈 구현 (CRUD, 조회수, 좋아요)
-2. Posts 모듈 구현
-3. Frontend Supabase SDK 통합
+1. Posts 모듈 구현 (CRUD, 카테고리, 태그)
+2. Comments/Likes 모듈 구현
+3. Redis 조회수 캐싱 적용
+4. Frontend Supabase SDK 통합
 
 ---
 
@@ -44,11 +45,14 @@
 - **JWT 검증**: Supabase JWT + Local JWT 모두 지원
 - **자동 사용자 생성**: OAuth 첫 로그인 시 portfolio.users 자동 생성
 
-### 포트폴리오 (Projects) 🔄
-- CRUD: 프로젝트 생성/조회/수정/삭제
-- 기술 스택 태그, 데모/GitHub URL
-- Redis 기반 조회수 (IP 중복 방지)
-- 좋아요 기능
+### 포트폴리오 (Projects) ✅
+- **CRUD**: 프로젝트 생성/조회/수정/삭제
+- **페이징**: 10개씩, 최대 100개
+- **필터링**: 상태별 (진행중/완료/보관)
+- **검색**: 제목, 설명 full-text 검색
+- **정렬**: 생성일/조회수/좋아요순
+- **권한**: 생성(관리자만), 수정/삭제(작성자/관리자)
+- **조회수**: 자동 증가 (Redis 캐싱 예정)
 
 ### 블로그 (Posts) ⏳
 - Markdown 지원

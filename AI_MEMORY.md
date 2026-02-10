@@ -1,8 +1,8 @@
 # 📝 Portfolio Backend - 프로젝트 현황
 
 > **프로젝트**: 포트폴리오 + 기술 블로그 백엔드
-> **최종 업데이트**: 2026-02-09
-> **현재 상태**: Supabase OAuth 전환 완료, Projects 모듈 구현 대기
+> **최종 업데이트**: 2026-02-10
+> **현재 상태**: Projects 모듈 CRUD 구현 완료, Posts 모듈 구현 대기
 
 ---
 
@@ -26,13 +26,13 @@
 | **DB Schema** | ✅ 완료 | 100% | 2026-02-07 |
 | **Auth 모듈** | ✅ 완료 | 100% | 2026-02-09 |
 | **CI/CD** | ✅ 완료 | 100% | 2026-02-07 |
-| **Projects 모듈** | 🔄 대기 | 0% | - |
+| **Projects 모듈** | ✅ 완료 | 100% | 2026-02-10 |
 | **Posts 모듈** | ⏳ 대기 | 0% | - |
 | **Comments 모듈** | ⏳ 대기 | 0% | - |
 | **Likes 모듈** | ⏳ 대기 | 0% | - |
 | **Frontend 통합** | ⏳ 대기 | 0% | - |
 
-**전체 진행률**: 약 35% (3/8 모듈 완료)
+**전체 진행률**: 약 50% (4/8 모듈 완료)
 
 ---
 
@@ -116,24 +116,57 @@
 
 ---
 
-## 🔄 진행 중인 작업
+### Phase 3: Projects 모듈 구현 (2026-02-10)
 
-### 배포 테스트 (2026-02-09)
-
-**현재 상태**:
+#### 1. DTO 생성
 ```
-✅ 코드 수정 완료
-✅ Git Push 완료
-🔄 GitHub Actions 빌드 중
-⏳ 서버 배포 대기
-⏳ API 테스트 대기
+✅ CreateProjectDto (class-validator 검증)
+✅ UpdateProjectDto (PartialType)
+✅ GetProjectsDto (페이징, 필터링, 검색, 정렬)
+✅ ProjectResponseDto (Swagger 문서화)
+✅ PaginatedProjectsResponseDto (페이징 응답)
 ```
 
-**다음 단계**:
-1. GitHub Actions 성공 확인
-2. 서버 로그 확인
-3. API 테스트 (Swagger, Health check)
-4. Supabase OAuth Provider 활성화
+#### 2. Service 구현
+```
+✅ findAll() - 목록 조회
+   - 페이징 (page, limit)
+   - 필터링 (status)
+   - 검색 (title, description - ILIKE)
+   - 정렬 (created_at, view_count, like_count)
+✅ findOne() - 상세 조회
+✅ create() - 생성 (관리자만)
+✅ update() - 수정 (작성자/관리자)
+✅ remove() - 삭제 (작성자/관리자)
+✅ incrementViewCount() - 조회수 증가
+```
+
+#### 3. Controller 구현
+```
+✅ GET /projects - 목록 조회
+✅ GET /projects/:id - 상세 조회 (조회수 자동 증가)
+✅ POST /projects - 생성 (JwtAuthGuard)
+✅ PATCH /projects/:id - 수정 (JwtAuthGuard)
+✅ DELETE /projects/:id - 삭제 (JwtAuthGuard)
+```
+
+#### 4. Module 등록
+```
+✅ TypeORM Repository 등록
+✅ AppModule에 ProjectsModule 등록
+```
+
+**구현 특징**:
+- NestJS 표준 패턴 준수
+- TypeORM QueryBuilder 활용
+- Swagger 완전 문서화
+- 권한 체크 (관리자/작성자)
+- 비정규화 (author_nickname, author_avatar_url)
+
+**TODO**:
+- Redis 조회수 캐싱 (IP 중복 방지)
+- 테스트 코드 작성
+- 배포 및 검증
 
 ---
 
@@ -149,45 +182,21 @@
    - GitHub OAuth 설정
 ```
 
-### 우선순위 2: Projects 모듈 구현
-```
-1. 모듈 생성
-   npx nest g module modules/projects --no-spec
-   npx nest g controller modules/projects --no-spec
-   npx nest g service modules/projects --no-spec
-
-2. DTO 생성
-   - CreateProjectDto
-   - UpdateProjectDto
-   - GetProjectsDto
-   - ProjectResponseDto
-
-3. Service 구현
-   - findAll (페이징, 필터링, 검색)
-   - findOne
-   - create (관리자만)
-   - update (작성자/관리자)
-   - remove (작성자/관리자)
-   - incrementViewCount (Redis)
-
-4. Controller 구현
-   - GET /projects
-   - GET /projects/:id
-   - POST /projects
-   - PATCH /projects/:id
-   - DELETE /projects/:id
-
-5. Swagger 문서화
-```
-
-### 우선순위 3: Posts 모듈
+### 우선순위 1: Posts 모듈
 ```
 Projects와 유사한 구조
 + 카테고리/태그 필터링
 + 읽기 시간 계산
 ```
 
-### 우선순위 4: 소셜 기능
+### 우선순위 2: Redis 조회수 캐싱
+```
+1. CacheModule 활용
+2. IP 기반 중복 방지 (1시간)
+3. Projects/Posts 조회수 적용
+```
+
+### 우선순위 3: 소셜 기능
 ```
 Comments 모듈
 Likes 모듈
@@ -231,7 +240,7 @@ portfolio-backend/
 │   ├── entities/                   # ✅ 엔티티 (6개)
 │   ├── modules/
 │   │   ├── auth/                   # ✅ 인증 (완료)
-│   │   ├── projects/               # 🔄 구현 대기
+│   │   ├── projects/               # ✅ 완료
 │   │   ├── posts/                  # ⏳ 구현 대기
 │   │   ├── comments/               # ⏳ 구현 대기
 │   │   └── likes/                  # ⏳ 구현 대기
@@ -404,11 +413,17 @@ viewed_at: timestamptz
 - ✅ SupabaseJwtStrategy 구현
 - ✅ Migration SQL 작성
 - ✅ 빌드 에러 수정 (2회)
-- 🔄 배포 테스트 진행 중
+
+### 2026-02-10
+- ✅ Projects 모듈 CRUD 완전 구현
+- ✅ DTO (5개), Service, Controller, Module
+- ✅ Swagger 문서화 완료
+- ✅ 문서 업데이트 (README, AI_MEMORY)
 
 ### 다음 예정
-- 🔄 배포 안정화
-- 🔄 Projects 모듈 구현
+- 🔄 Posts 모듈 구현
+- 🔄 Redis 조회수 캐싱
+- 🔄 Comments/Likes 모듈
 - 🔄 Frontend 통합
 
 ---
@@ -479,6 +494,6 @@ viewed_at: timestamptz
 
 ---
 
-**Last Updated**: 2026-02-09 23:00
-**Status**: Supabase OAuth 전환 완료, 배포 테스트 중
-**Next**: Projects 모듈 구현
+**Last Updated**: 2026-02-10 14:00
+**Status**: Projects 모듈 CRUD 구현 완료
+**Next**: Posts 모듈 구현, Redis 캐싱 적용
