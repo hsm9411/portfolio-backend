@@ -8,7 +8,9 @@ import {
   Param,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -22,11 +24,16 @@ import {
   PaginatedPostsResponseDto,
 } from './dto';
 import { SkipThrottle } from '@nestjs/throttler';
+import { ViewCountService, ViewTargetType } from '../../common/services';
+import { getClientIp } from '../../common/utils';
 
 @ApiTags('posts')
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly viewCountService: ViewCountService,
+  ) {}
 
   @Get()
   @SkipThrottle()
@@ -37,12 +44,18 @@ export class PostsController {
 
   @Get(':slug')
   @SkipThrottle()
-  @ApiOperation({ summary: 'Slug로 글 조회' })
-  async findBySlug(@Param('slug') slug: string): Promise<PostResponseDto> {
+  @ApiOperation({ summary: 'Slug로 글 조회 (Redis 조회수 캐싱)' })
+  async findBySlug(
+    @Param('slug') slug: string,
+    @Req() req: Request,
+  ): Promise<PostResponseDto> {
     const post = await this.postsService.findBySlug(slug);
     
-    // 조회수 증가 (비동기, 에러 무시)
-    this.postsService.incrementViewCount(post.id).catch(() => {});
+    // Redis 기반 조회수 증가 (IP 중복 방지, 24시간 TTL)
+    const clientIp = getClientIp(req);
+    this.viewCountService
+      .incrementView(ViewTargetType.POST, post.id, clientIp)
+      .catch(() => {});
 
     return post;
   }

@@ -10,13 +10,13 @@
 | **Posts 모듈** | ✅ 완료 | CRUD, Slug 자동생성, Tags 검색 |
 | **Comments 모듈** | ✅ 완료 | Polymorphic, 익명 마스킹, Nested |
 | **Likes 모듈** | ✅ 완료 | Polymorphic, 트랜잭션 기반 토글 |
-| **Redis 조회수** | ⏳ 대기 | IP 기반 캐싱 (TTL 24h) |
+| **Redis 조회수** | ✅ 완료 | IP 기반 캐싱, 24h TTL, Write-Back |
 
 **최근 작업 (2026-02-10):**
-- ✅ Comments: Polymorphic Entity, 로그인 기반 익명, Nested 댓글
-- ✅ Comments Masking: 작성자/Admin에게만 원본 정보 노출
-- ✅ Likes: Polymorphic Entity, UNIQUE 제약, 트랜잭션 토글
-- ✅ OptionalJwtAuthGuard: 선택적 인증 (비로그인 조회 허용)
+- ✅ Redis 조회수: IP 기반 중복 방지 (24h TTL)
+- ✅ ViewCountService: Redis 캐싱 + Write-Back 전략
+- ✅ IP 추출: CF-Connecting-IP 우선 순위
+- ✅ Posts/Projects Controller에 Redis 조회수 적용
 
 ---
 
@@ -48,6 +48,17 @@ ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }])
 CF-Connecting-IP > X-Real-IP > X-Forwarded-For > req.ip
 ```
 
+### Redis 조회수 캐싱
+```typescript
+// IP 기반 중복 방지
+Key: view:ip:{type}:{id}:{ip} (TTL 24h)
+
+// 누적 카운트
+Key: view:count:{type}:{id}
+
+// Write-Back: Redis → DB 주기적 동기화
+```
+
 ---
 
 ## 📦 DB Schema
@@ -72,9 +83,9 @@ CF-Connecting-IP > X-Real-IP > X-Forwarded-For > req.ip
 
 ## 🚀 다음 작업
 
-1. Redis 조회수 캐싱 (IP+PostID, TTL 24h)
+1. Cron Job: Redis → DB 주기적 동기화
 2. 프론트엔드 연동 (Next.js + Supabase SDK)
-3. Docker Compose 배포 구성 최적화
+3. API 문서 개선 (Swagger Examples)
 
 ---
 

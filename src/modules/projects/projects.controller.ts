@@ -27,11 +27,16 @@ import {
 } from './dto';
 import { JwtAuthGuard, OptionalJwtAuthGuard } from '../auth/guards';
 import { User } from '../../entities/user/user.entity';
+import { ViewCountService, ViewTargetType } from '../../common/services';
+import { getClientIp } from '../../common/utils';
 
 @ApiTags('projects')
 @Controller('projects')
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly viewCountService: ViewCountService,
+  ) {}
 
   /**
    * 프로젝트 목록 조회
@@ -54,18 +59,22 @@ export class ProjectsController {
    */
   @Get(':id')
   @UseGuards(OptionalJwtAuthGuard)
-  @ApiOperation({ summary: '프로젝트 상세 조회' })
+  @ApiOperation({ summary: '프로젝트 상세 조회 (Redis 조회수 캐싱)' })
   @ApiResponse({
     status: 200,
     description: '조회 성공',
     type: ProjectResponseDto,
   })
   @ApiResponse({ status: 404, description: '프로젝트 없음' })
-  async findOne(@Param('id') id: string): Promise<ProjectResponseDto> {
-    // 조회수 증가 (비동기)
-    this.projectsService.incrementViewCount(id).catch(() => {
-      // 실패해도 무시 (조회수는 중요하지 않음)
-    });
+  async findOne(
+    @Param('id') id: string,
+    @Req() req: Request,
+  ): Promise<ProjectResponseDto> {
+    // Redis 기반 조회수 증가 (IP 중복 방지, 24시간 TTL)
+    const clientIp = getClientIp(req);
+    this.viewCountService
+      .incrementView(ViewTargetType.PROJECT, id, clientIp)
+      .catch(() => {});
 
     return this.projectsService.findOne(id);
   }
