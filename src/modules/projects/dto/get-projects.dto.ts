@@ -19,7 +19,7 @@ export class GetProjectsDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page?: number = 1;
+  page: number = 1;
 
   @ApiPropertyOptional({
     description: '페이지당 항목 수',
@@ -32,7 +32,7 @@ export class GetProjectsDto {
   @IsInt()
   @Min(1)
   @Max(100)
-  limit?: number = 10;
+  limit: number = 10;
 
   @ApiPropertyOptional({
     description: '검색어 (제목 또는 설명)',
