@@ -7,7 +7,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Trust Proxy (Cloudflare 환경 필수)
-  app.set('trust proxy', true);
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', true);
 
   // CORS 설정 (Vercel 도메인만 허용)
   const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [

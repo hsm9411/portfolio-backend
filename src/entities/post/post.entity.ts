@@ -9,7 +9,8 @@ import {
 
 @Entity('posts')
 @Index(['slug'], { unique: true })
-@Index(['tags'], { using: 'GIN' })
+// GIN 인덱스는 마이그레이션으로 생성: CREATE INDEX idx_posts_tags ON posts USING GIN (tags);
+@Index('idx_posts_tags', { synchronize: false })
 export class Post {
   @PrimaryGeneratedColumn('uuid')
   id: string;
