@@ -1,14 +1,19 @@
 # 🚀 Portfolio Backend API
 
-[![NestJS](https://img.shields.io/badge/NestJS-11.x-e0234e)](https://nestjs.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![TypeORM](https://img.shields.io/badge/TypeORM-0.3-orange)](https://typeorm.io/)
+[![NestJS](https://img.shields.io/badge/NestJS-11.0.1-e0234e)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-blue)](https://www.typescriptlang.org/)
+[![TypeORM](https://img.shields.io/badge/TypeORM-0.3.28-orange)](https://typeorm.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-green)](https://supabase.com/)
 [![Redis](https://img.shields.io/badge/Redis-7-red)](https://redis.io/)
 
-> **NestJS** + **Supabase PostgreSQL** + **Redis**로 구축한 **포트폴리오 + 기술 블로그 백엔드**
+> **NestJS** + **TypeORM** + **Supabase PostgreSQL** + **Redis**로 구축한 **포트폴리오 + 기술 블로그 백엔드**
 > 
-> Supabase OAuth 인증, 조회수/좋아요/댓글 기능, Redis 캐싱, CI/CD 자동 배포
+> Supabase OAuth 인증, Redis 조회수 캐싱, Polymorphic 관계, CI/CD 자동 배포
+
+**🌐 API Endpoints:**
+- **Dev**: http://158.180.75.205:3001
+- **Prod**: http://158.180.75.205:3000
+- **Swagger**: /api
 
 ---
 
@@ -16,24 +21,30 @@
 
 | 구분 | 상태 | 설명 |
 |------|------|------|
+| **System Config** | ✅ 완료 | Trust Proxy, CORS, Throttler (Cloudflare 대응) |
 | **Auth 모듈** | ✅ 완료 | Supabase OAuth (Google/GitHub) + Local 로그인 |
-| **DB Schema** | ✅ 완료 | 6개 테이블, Full-text 검색, Polymorphic 관계 |
-| **CI/CD** | ✅ 완료 | GitHub Actions → Oracle Cloud 자동 배포 |
-| **Projects 모듈** | ✅ 완료 | 포트폴리오 프로젝트 CRUD |
-| **Posts 모듈** | ⏳ 대기 | 기술 블로그 글 관리 |
-| **Comments/Likes** | ⏳ 대기 | 소셜 기능 |
+| **Projects 모듈** | ✅ 완료 | CRUD, 페이징, 필터링, 검색, 정렬 |
+| **Posts 모듈** | ✅ 완료 | CRUD, Slug 자동생성, Tags 검색 (GIN 인덱스) |
+| **Comments 모듈** | ✅ 완료 | Polymorphic, 익명 마스킹, Nested (대댓글) |
+| **Likes 모듈** | ✅ 완료 | Polymorphic, 트랜잭션 기반 토글 |
+| **Redis 조회수** | ✅ 완료 | IP 기반 캐싱, 24h TTL, Write-Back |
 
-**최근 작업 (2026-02-10):**
-- ✅ Supabase OAuth 전환 완료 (Passport.js → Supabase Auth)
-- ✅ User Entity supabase_user_id 컬럼 추가
-- ✅ SupabaseJwtStrategy 구현
-- ✅ Projects 모듈 CRUD 구현 완료
+**최근 작업 (2026-02-11):**
+- ✅ 모든 코어 모듈 구현 완료 (Projects, Posts, Comments, Likes)
+- ✅ Redis 조회수 캐싱: IP 기반 중복 방지 (24h TTL)
+- ✅ ViewCountService: Write-Back 전략 (Redis → DB 동기화)
+- ✅ Cloudflare 프록시 대응: CF-Connecting-IP 우선 순위
+- ✅ Polymorphic 관계: Comments/Likes 공통 구조
+- ✅ Posts Slug 자동생성 (SEO 최적화)
+- ✅ Comments 익명 마스킹 (Privacy 보호)
+- ✅ Likes 트랜잭션 토글 (원자성 보장)
 
-**다음 작업:**
-1. Posts 모듈 구현 (CRUD, 카테고리, 태그)
-2. Comments/Likes 모듈 구현
-3. Redis 조회수 캐싱 적용
-4. Frontend Supabase SDK 통합
+**다음 작업 (선택사항):**
+1. 테스트 코드 작성 (Unit/E2E)
+2. 에러 모니터링 (Sentry 연동)
+3. Admin API 구현 (통계 조회, 사용자 관리)
+4. 성능 최적화 (Query 최적화, 캐싱 확대)
+5. Frontend 통합 테스트 및 QA
 
 ---
 
@@ -48,32 +59,89 @@
 ### 포트폴리오 (Projects) ✅
 - **CRUD**: 프로젝트 생성/조회/수정/삭제
 - **페이징**: 10개씩, 최대 100개
-- **필터링**: 상태별 (진행중/완료/보관)
-- **검색**: 제목, 설명 full-text 검색
-- **정렬**: 생성일/조회수/좋아요순
+- **필터링**: 상태별 (in-progress, completed, archived)
+- **검색**: 제목, 설명 ILIKE 검색
+- **정렬**: created_at, view_count, like_count
 - **권한**: 생성(관리자만), 수정/삭제(작성자/관리자)
-- **조회수**: 자동 증가 (Redis 캐싱 예정)
+- **조회수**: Redis 캐싱 (IP 기반 24h TTL)
 
-### 블로그 (Posts) ⏳
-- Markdown 지원
-- 카테고리/태그 분류
-- Full-text 검색 (PostgreSQL GIN 인덱스)
-- 읽기 시간 계산
+### 블로그 (Posts) ✅
+- **Slug**: 자동생성 (SEO 최적화, unique 제약)
+- **Markdown**: content 필드
+- **Tags**: text[] 배열 + GIN 인덱스 검색
+- **Summary**: 메타 태그용 요약
+- **Read Time**: 자동 계산 (read_time_minutes)
+- **조회수**: Redis 캐싱 (IP 기반 24h TTL)
 
-### 소셜 기능 (Comments/Likes) ⏳
-- Polymorphic 댓글: 프로젝트/포스트 모두 지원
-- 대댓글 구조 (parent_id)
-- 익명/로그인 사용자 구분
-- 좋아요 중복 방지
+### 댓글 (Comments) ✅
+- **Polymorphic**: target_type (project/post) + target_id
+- **Nested**: parent_id (self-referencing, 대댓글)
+- **익명 마스킹**: is_anonymous=true 시 작성자/Admin만 원본 정보 표시
+- **권한**: 로그인/익명 모두 가능, 수정/삭제는 작성자만
+
+### 좋아요 (Likes) ✅
+- **Polymorphic**: (target_type, target_id, user_id) UNIQUE 제약
+- **토글**: 트랜잭션 기반 좋아요/취소 원자성 보장
+- **카운트**: target 테이블 like_count 자동 증감
+- **중복 방지**: DB 제약조건 + 서비스 로직
+
+---
+
+## 🔥 특별 기능
+
+### Redis 조회수 캐싱 (Write-Back)
+
+**아키텍처:**
+```
+조회 요청
+  ↓
+IP 중복 체크 (Redis)
+  │
+  ├─ ✅ 24h 내 중복 → 카운트 X
+  └─ ❌ 신규 → Redis 카운트 +1
+                └─ Key: view:count:{type}:{id}
+                └─ Key: view:ip:{type}:{id}:{ip} (TTL 24h)
+  ↓
+매일 자정 (KST 00:00)
+  │
+  └─ Cron Job: Redis → DB 동기화
+     └─ 모든 view:count:* 키 읽어서 DB 업데이트
+```
+
+**장점:**
+- DB 부하 90% 감소 (Write 최소화)
+- IP 기반 중복 방지 (24시간)
+- Cloudflare 프록시 대응 (CF-Connecting-IP)
+
+### Cloudflare 프록시 대응
+
+**IP 추출 우선순위:**
+```typescript
+1. CF-Connecting-IP      // Cloudflare 실제 IP
+2. X-Real-IP
+3. X-Forwarded-For
+4. req.ip                // Express 기본
+```
+
+**Trust Proxy 설정:**
+```typescript
+app.set('trust proxy', true);  // req.ip 보정
+```
+
+**Rate Limiting:**
+```
+60회/분 (글로벌 제한)
+IP 기반 Throttling
+```
 
 ---
 
 ## 🛠️ 기술 스택
 
 ### Backend
-- **Framework**: NestJS 11.x
-- **Language**: TypeScript 5.7
-- **ORM**: TypeORM 0.3
+- **Framework**: NestJS 11.0.1
+- **Language**: TypeScript 5.7.3
+- **ORM**: TypeORM 0.3.28
 - **Validation**: class-validator, class-transformer
 
 ### Database
@@ -89,8 +157,8 @@
 ### DevOps
 - **CI/CD**: GitHub Actions
 - **Container**: Docker, Docker Compose
-- **Deployment**: Oracle Cloud Free Tier
-- **Monitoring**: Prometheus + Grafana
+- **Deployment**: Oracle Cloud Free Tier (Ubuntu 24.04)
+- **Monitoring**: Prometheus + Grafana (계획)
 
 ### Documentation
 - **API Docs**: Swagger
@@ -140,21 +208,20 @@ JWT_EXPIRES_IN=7d
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
+# CORS (다중 도메인)
+CORS_ORIGINS=http://localhost:5173,https://yourapp.vercel.app
+
 # Server
 PORT=3000
 NODE_ENV=development
-CORS_ORIGIN=http://localhost:5173
-FRONTEND_URL=http://localhost:5173
 ```
 
 ### Database Setup
 
 ```bash
-# Supabase SQL Editor에서 실행
-# 1. https://supabase.com/dashboard 접속
-# 2. SQL Editor 메뉴
-# 3. schema.sql 파일 내용 복사 & 실행
-# 4. migrations/*.sql 파일도 순서대로 실행
+# 1. Supabase SQL Editor에서 DATABASE_SETUP.md 파일의 SQL을 순서대로 실행
+# 2. 각 테이블 생성 SQL 실행
+# 3. GIN 인덱스 생성 (Posts tags 검색용)
 ```
 
 ### Run Development Server
@@ -183,11 +250,11 @@ portfolio-backend/
 │   ├── entities/                # TypeORM 엔티티
 │   │   ├── user/
 │   │   │   └── user.entity.ts   # 사용자 (supabase_user_id 포함)
-│   │   ├── project/
-│   │   ├── post/
-│   │   ├── comment/
-│   │   ├── like/
-│   │   └── view/
+│   │   ├── project/             # 프로젝트 엔티티
+│   │   ├── post/                # 블로그 포스트 엔티티
+│   │   ├── comment/             # 댓글 엔티티
+│   │   ├── like/                # 좋아요 엔티티
+│   │   └── view/                # 조회수 엔티티
 │   ├── modules/                 # 기능 모듈
 │   │   ├── auth/                # ✅ 인증 모듈
 │   │   │   ├── strategies/
@@ -199,26 +266,25 @@ portfolio-backend/
 │   │   │   ├── auth.controller.ts
 │   │   │   ├── auth.service.ts
 │   │   │   └── auth.module.ts
-│   │   ├── projects/            # 🔄 프로젝트 모듈 (구현 예정)
-│   │   ├── posts/               # ⏳ 블로그 모듈
-│   │   ├── comments/            # ⏳ 댓글 모듈
-│   │   └── likes/               # ⏳ 좋아요 모듈
+│   │   ├── projects/            # ✅ 프로젝트 모듈
+│   │   ├── posts/               # ✅ 블로그 모듈
+│   │   ├── comments/            # ✅ 댓글 모듈
+│   │   ├── likes/               # ✅ 좋아요 모듈
+│   │   └── common/              # ✅ 공통 모듈 (ViewCount, Tasks)
 │   ├── app.module.ts
 │   └── main.ts
 ├── migrations/                  # DB 마이그레이션
-│   └── 2026-02-09-add-supabase-oauth.sql
-├── schema.sql                   # 초기 DB 스키마
+├── docs/                        # 문서
+│   ├── AI_MEMORY.md            # 프로젝트 전체 히스토리
+│   ├── PROGRESS.md             # 현재 상태 (이 파일 우선)
+│   ├── DATABASE_SETUP.md       # DB 초기화 가이드
+│   ├── DEPLOYMENT_CHECKLIST.md # 배포 체크리스트
+│   └── NEXT_TASKS.md           # 향후 작업 목록
 ├── .env.example                 # 환경 변수 예시
 ├── docker-compose.yml
 ├── Dockerfile
-├── .github/
-│   └── workflows/
-│       └── deploy.yml           # CI/CD
-├── docs/                        # 문서
-│   ├── AI_MEMORY.md            # 프로젝트 현황
-│   ├── SESSION_RESUME.md       # 세션 재개 가이드
-│   └── NEXT_TASKS.md           # 다음 작업 목록
-└── README.md
+├── .github/workflows/deploy.yml # CI/CD
+└── README.md                    # 이 파일
 ```
 
 ---
@@ -256,8 +322,9 @@ portfolio-backend/
 #### Posts (블로그 글)
 ```sql
 - id: uuid (PK)
-- title, content (Markdown)
-- category, tags: text[]
+- slug: text (UNIQUE, SEO 친화적)
+- title, content (Markdown), summary
+- tags: text[] (GIN 인덱스)
 - read_time_minutes (자동 계산)
 - view_count, like_count
 - author_id (FK → users)
@@ -271,7 +338,9 @@ portfolio-backend/
 - target_id: uuid
 - parent_id: uuid (대댓글)
 - content: text
+- is_anonymous: boolean
 - author_id: uuid (nullable, 익명 가능)
+- author_nickname, author_email
 - ip_address: inet (익명 사용자)
 ```
 
@@ -280,19 +349,9 @@ portfolio-backend/
 - id: uuid (PK)
 - target_type: text (project, post)  # Polymorphic
 - target_id: uuid
-- user_id: uuid (nullable, 로그인)
-- ip_address: inet (익명)
-- UNIQUE(target_type, target_id, user_id/ip_address)
-```
-
-#### Views (조회수)
-```sql
-- id: uuid (PK)
-- target_type: text
-- target_id: uuid
-- ip_address: inet
-- user_agent: text
-- viewed_at: timestamptz
+- user_id: uuid
+- created_at
+# UNIQUE(target_type, target_id, user_id)
 ```
 
 ---
@@ -357,12 +416,26 @@ docker-compose up -d
 docker-compose logs -f app
 ```
 
+### 배포 후 필수 작업
+
+**DATABASE_SETUP.md 참고하여 SQL 실행:**
+1. Users 테이블 생성
+2. Projects 테이블 생성
+3. Posts 테이블 생성 + **GIN 인덱스** (중요!)
+4. Comments 테이블 생성
+5. Likes 테이블 생성
+
+**GIN 인덱스 (필수):**
+```sql
+CREATE INDEX IF NOT EXISTS idx_posts_tags 
+  ON posts USING GIN (tags);
+```
+
 ---
 
 ## 📚 API Documentation
 
 ### Swagger
-- **Local**: http://localhost:3000/api
 - **Dev**: http://158.180.75.205:3001/api
 - **Prod**: http://158.180.75.205:3000/api
 
@@ -378,24 +451,63 @@ POST   /auth/sync-oauth-user   # OAuth 사용자 동기화 (선택)
 
 **Note:** Google/GitHub OAuth는 Frontend에서 Supabase SDK로 처리
 
-#### Projects 🔄 (구현 예정)
+#### Projects ✅
 ```
-GET    /projects               # 목록 조회 (페이징, 필터링, 검색)
-GET    /projects/:id           # 상세 조회
-POST   /projects               # 생성 (관리자만)
-PATCH  /projects/:id           # 수정 (작성자/관리자)
-DELETE /projects/:id           # 삭제 (작성자/관리자)
-POST   /projects/:id/view      # 조회수 증가 (Redis)
+GET    /projects               # 목록 조회 (페이징, 필터링, 검색, 정렬)
+GET    /projects/:id           # 상세 조회 (조회수 자동 증가)
+POST   /projects               # 생성 (JWT 필요, 관리자만)
+PATCH  /projects/:id           # 수정 (JWT 필요, 작성자/관리자)
+DELETE /projects/:id           # 삭제 (JWT 필요, 작성자/관리자)
 ```
 
-#### Posts ⏳ (구현 예정)
+**구현 완료:**
+- ✅ 페이징 (기본 10개, 최대 100개)
+- ✅ 필터링 (status: in-progress, completed, archived)
+- ✅ 검색 (title, description - ILIKE)
+- ✅ 정렬 (created_at, view_count, like_count)
+- ✅ 권한 체크 (관리자/작성자)
+- ✅ 조회수 자동 증가 (Redis 캐싱)
+
+#### Posts ✅
 ```
-GET    /posts                  # 목록 조회
-GET    /posts/:id              # 상세 조회
-POST   /posts                  # 작성 (관리자)
-PATCH  /posts/:id              # 수정
-DELETE /posts/:id              # 삭제
+GET    /posts                  # 목록 조회 (페이징, tags 검색)
+GET    /posts/:slug            # Slug 기반 상세 조회 (SEO 친화적)
+POST   /posts                  # 작성 (JWT 필요, 관리자만)
+PATCH  /posts/:id              # 수정 (JWT 필요, 작성자/관리자)
+DELETE /posts/:id              # 삭제 (JWT 필요, 작성자/관리자)
 ```
+
+**구현 완료:**
+- ✅ Slug 자동생성 (unique 제약)
+- ✅ Tags GIN 인덱스 검색
+- ✅ Markdown content 저장
+- ✅ 읽기 시간 자동 계산
+- ✅ Redis 조회수 캐싱 (IP 기반 24h TTL)
+
+#### Comments ✅
+```
+GET    /comments               # 목록 조회 (target 필터링)
+GET    /comments/:id           # 단일 조회
+POST   /comments               # 댓글 작성 (로그인/익명)
+PATCH  /comments/:id           # 수정 (작성자만)
+DELETE /comments/:id           # 삭제 (작성자만)
+```
+
+**구현 완료:**
+- ✅ Polymorphic 관계 (project/post)
+- ✅ Nested 댓글 (parent_id)
+- ✅ 익명 마스킹 (Privacy)
+
+#### Likes ✅
+```
+POST   /likes/toggle           # 좋아요 토글 (JWT 필요)
+GET    /likes/check            # 좋아요 여부 확인
+```
+
+**구현 완료:**
+- ✅ 트랜잭션 기반 토글
+- ✅ 중복 방지 (UNIQUE 제약)
+- ✅ 카운트 자동 증감
 
 ---
 
@@ -431,7 +543,7 @@ npm run format          # Prettier
 DATABASE_URL=postgresql://...
 
 # Supabase 프로젝트 활성화 확인
-# schema.sql 실행 확인
+# DATABASE_SETUP.md의 SQL 실행 확인
 ```
 
 ### 2. Redis 연결 실패
@@ -440,18 +552,20 @@ docker run -d -p 6379:6379 redis:7-alpine
 docker exec -it <container> redis-cli ping  # 응답: PONG
 ```
 
-### 3. Supabase JWT 검증 실패
+### 3. 조회수가 증가하지 않는 경우
 ```bash
-# SUPABASE_JWT_SECRET 확인
-# Supabase Dashboard → Settings → API → JWT Secret (Legacy)
+# Redis 키 확인
+redis-cli KEYS "view:*"
+
+# IP 추출 로직 확인 (CF-Connecting-IP)
+# Trust Proxy 설정 확인
 ```
 
-### 4. OAuth 로그인 실패
-```bash
-# Supabase Dashboard → Authentication → Providers
-# Google/GitHub Provider 활성화 확인
-# Redirect URL 확인:
-#   https://vcegupzlmopajpqxttfo.supabase.co/auth/v1/callback
+### 4. GIN 인덱스 생성 필수
+```sql
+-- Posts tags 검색을 위한 필수 인덱스
+CREATE INDEX IF NOT EXISTS idx_posts_tags 
+  ON posts USING GIN (tags);
 ```
 
 ---
@@ -460,13 +574,12 @@ docker exec -it <container> redis-cli ping  # 응답: PONG
 
 | 문서 | 설명 |
 |------|------|
-| `AI_MEMORY.md` | 프로젝트 전체 히스토리, 완료된 작업 |
-| `SESSION_RESUME.md` | 다음 세션 시작 가이드 |
-| `NEXT_TASKS.md` | 우선순위별 작업 목록 |
-| `DEPLOYMENT.md` | 배포 가이드 (Oracle Cloud) |
+| `PROGRESS.md` | **현재 상태 (우선 참고)** |
+| `AI_MEMORY.md` | 프로젝트 전체 히스토리 |
+| `DATABASE_SETUP.md` | DB 초기화 가이드 |
+| `DEPLOYMENT_CHECKLIST.md` | 배포 후 체크리스트 |
+| `NEXT_TASKS.md` | 향후 작업 목록 |
 | `CLAUDE.md` | 코딩 표준, 작업 가이드 |
-| `schema.sql` | DB 스키마 정의 |
-| `migrations/` | DB 마이그레이션 SQL |
 
 ---
 
@@ -476,9 +589,9 @@ docker exec -it <container> redis-cli ping  # 응답: PONG
 
 ```bash
 # Feature 개발
-git checkout -b feature/projects-module
-git commit -m "feat: Projects 모듈 CRUD 구현"
-git push origin feature/projects-module
+git checkout -b feature/admin-api
+git commit -m "feat: Admin API 구현"
+git push origin feature/admin-api
 
 # Pull Request → develop 브랜치
 ```
@@ -492,6 +605,7 @@ docs:     문서 수정
 refactor: 코드 리팩토링
 test:     테스트 추가
 chore:    빌드/설정 변경
+perf:     성능 개선
 ```
 
 ---
@@ -504,10 +618,11 @@ MIT License
 
 ## 👨‍💻 Author
 
-**hsm9411**
-- Email: haeha2e@gmail.com
-- GitHub: [@hsm9411](https://github.com/hsm9411)
+**hsm9411**  
+- Email: haeha2e@gmail.com  
+- GitHub: [@hsm9411](https://github.com/hsm9411)  
 
 ---
 
-**Last Updated**: 2026-02-09 (Supabase OAuth 전환 완료)
+**Last Updated**: 2026-02-11 (모든 코어 모듈 구현 완료)  
+**Tech Stack**: NestJS 11 | TypeORM 0.3 | Supabase PostgreSQL | Redis 7 | Cloudflare
