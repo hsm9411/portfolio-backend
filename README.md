@@ -29,7 +29,9 @@
 | **Likes 모듈** | ✅ 완료 | Polymorphic, 트랜잭션 기반 토글 |
 | **Redis 조회수** | ✅ 완료 | IP 기반 캐싱, 24h TTL, Write-Back |
 
-**최근 작업 (2026-02-11):**
+**최근 작업 (2026-02-12):**
+- ✅ Post Entity 컬럼명 매핑 수정 (snake_case → camelCase)
+- ✅ Supabase JWT 인증 통합 (Frontend 연동)
 - ✅ 모든 코어 모듈 구현 완료 (Projects, Posts, Comments, Likes)
 - ✅ Redis 조회수 캐싱: IP 기반 중복 방지 (24h TTL)
 - ✅ ViewCountService: Write-Back 전략 (Redis → DB 동기화)
@@ -624,5 +626,5 @@ MIT License
 
 ---
 
-**Last Updated**: 2026-02-11 (모든 코어 모듈 구현 완료)  
+**Last Updated**: 2026-02-12 (Frontend 연동 완료, Post Entity 수정)  
 **Tech Stack**: NestJS 11 | TypeORM 0.3 | Supabase PostgreSQL | Redis 7 | Cloudflare
