@@ -6,11 +6,42 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Trust Proxy (Cloudflare 환경 필수)
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', true);
+
   // CORS 설정
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    credentials: true,
-  });
+  const corsOrigins = process.env.CORS_ORIGINS;
+  
+  if (corsOrigins === '*') {
+    // 개발 환경: 모든 origin 허용
+    app.enableCors({
+      origin: true,
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    });
+  } else {
+    // 프로덕션: 특정 도메인만 허용
+    const allowedOrigins = corsOrigins?.split(',') || [
+      'http://localhost:5173',
+      'http://localhost:3000',
+    ];
+
+    app.enableCors({
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    });
+  }
 
   // Global Validation Pipe
   app.useGlobalPipes(

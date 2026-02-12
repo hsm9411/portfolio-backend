@@ -1,322 +1,499 @@
-# Portfolio Backend - AI Memory
+# 📝 Portfolio Backend - 프로젝트 현황
 
-> **프로젝트 시작**: 2026-02-07
-> **현재 상태**: 기본 설정 완료 ✅
-> **다음 작업**: Auth 모듈 구현
+> **프로젝트**: 포트폴리오 + 기술 블로그 백엔드
+> **최종 업데이트**: 2026-02-10
+> **현재 상태**: Projects 모듈 CRUD 구현 완료, Posts 모듈 구현 대기
 
 ---
 
-## 📋 프로젝트 개요
+## 🎯 프로젝트 개요
 
-### 목적
-기존 게시판 프로젝트(board-supabase)와 **별도로** 새로운 포트폴리오 + 기술 블로그 백엔드 구축
+**목적**: NestJS 기반 포트폴리오 + 기술 블로그 백엔드 API
 
-### 기술 스택
+**주요 특징**:
+- ✅ Supabase OAuth 인증 (Google, GitHub)
+- ✅ PostgreSQL (Supabase) + TypeORM
+- ✅ Redis 캐싱 (조회수, 세션)
+- ✅ CI/CD 자동 배포 (GitHub Actions → Oracle Cloud)
+- 🔄 CRUD API (Projects, Posts, Comments, Likes)
+
+---
+
+## 📊 전체 진행 상황
+
+| 모듈 | 상태 | 진행률 | 완료일 |
+|------|------|--------|--------|
+| **DB Schema** | ✅ 완료 | 100% | 2026-02-07 |
+| **Auth 모듈** | ✅ 완료 | 100% | 2026-02-09 |
+| **CI/CD** | ✅ 완료 | 100% | 2026-02-07 |
+| **Projects 모듈** | ✅ 완료 | 100% | 2026-02-10 |
+| **Posts 모듈** | ⏳ 대기 | 0% | - |
+| **Comments 모듈** | ⏳ 대기 | 0% | - |
+| **Likes 모듈** | ⏳ 대기 | 0% | - |
+| **Frontend 통합** | ⏳ 대기 | 0% | - |
+
+**전체 진행률**: 약 50% (4/8 모듈 완료)
+
+---
+
+## ✅ 완료된 작업
+
+### Phase 1: 프로젝트 초기 설정 (2026-02-07)
+
+#### 1. Database Schema 설계
+```sql
+✅ portfolio 스키마 생성
+✅ 6개 테이블 정의
+   - users (사용자)
+   - projects (프로젝트 포트폴리오)
+   - posts (블로그 글)
+   - comments (댓글/대댓글)
+   - likes (좋아요)
+   - views (조회수)
+✅ Full-text 검색 인덱스 (GIN)
+✅ Polymorphic 관계 (comments, likes, views)
+✅ 비정규화 (작성자 정보 캐싱)
+✅ RLS (Row Level Security) 준비
+```
+
+#### 2. NestJS 프로젝트 구조
+```
+✅ TypeORM 설정
+✅ Redis 설정
+✅ Entities 생성 (6개)
+✅ Config 모듈
+✅ Swagger 설정
+```
+
+#### 3. CI/CD 구축
+```
+✅ GitHub Actions Workflow
+✅ Docker 이미지 빌드
+✅ Oracle Cloud 배포 자동화
+✅ develop → Dev 환경 (포트 3001)
+✅ main → Prod 환경 (포트 3000)
+```
+
+---
+
+### Phase 2: Auth 모듈 구현 (2026-02-07 ~ 2026-02-09)
+
+#### 1. Local 인증 (2026-02-07)
+```
+✅ 회원가입 (/auth/register)
+✅ 로그인 (/auth/login)
+✅ JWT 발급
+✅ bcrypt 비밀번호 해싱
+✅ JwtStrategy 구현
+✅ JwtAuthGuard 구현
+```
+
+#### 2. Passport OAuth 구현 (2026-02-07)
+```
+✅ Google OAuth Strategy
+✅ GitHub OAuth Strategy
+✅ OAuth Guards
+✅ OAuth 콜백 처리
+```
+
+#### 3. Supabase OAuth 전환 (2026-02-09)
+```
+✅ User Entity supabase_user_id 컬럼 추가
+✅ SupabaseJwtStrategy 구현
+✅ AuthModule 업데이트
+✅ AuthController 간소화
+✅ Google/GitHub Strategy 백업
+✅ Migration SQL 작성 및 실행
+✅ 환경변수 설정 (SUPABASE_*)
+✅ TypeScript 빌드 에러 수정
+```
+
+**변경 이유**:
+- Frontend/Backend 간소화
+- 자동 토큰 관리 (Refresh Token)
+- Supabase DB와 통합
+- 코드 60% 감소 (~220 lines)
+
+---
+
+### Phase 3: Projects 모듈 구현 (2026-02-10)
+
+#### 1. DTO 생성
+```
+✅ CreateProjectDto (class-validator 검증)
+✅ UpdateProjectDto (PartialType)
+✅ GetProjectsDto (페이징, 필터링, 검색, 정렬)
+✅ ProjectResponseDto (Swagger 문서화)
+✅ PaginatedProjectsResponseDto (페이징 응답)
+```
+
+#### 2. Service 구현
+```
+✅ findAll() - 목록 조회
+   - 페이징 (page, limit)
+   - 필터링 (status)
+   - 검색 (title, description - ILIKE)
+   - 정렬 (created_at, view_count, like_count)
+✅ findOne() - 상세 조회
+✅ create() - 생성 (관리자만)
+✅ update() - 수정 (작성자/관리자)
+✅ remove() - 삭제 (작성자/관리자)
+✅ incrementViewCount() - 조회수 증가
+```
+
+#### 3. Controller 구현
+```
+✅ GET /projects - 목록 조회
+✅ GET /projects/:id - 상세 조회 (조회수 자동 증가)
+✅ POST /projects - 생성 (JwtAuthGuard)
+✅ PATCH /projects/:id - 수정 (JwtAuthGuard)
+✅ DELETE /projects/:id - 삭제 (JwtAuthGuard)
+```
+
+#### 4. Module 등록
+```
+✅ TypeORM Repository 등록
+✅ AppModule에 ProjectsModule 등록
+```
+
+**구현 특징**:
+- NestJS 표준 패턴 준수
+- TypeORM QueryBuilder 활용
+- Swagger 완전 문서화
+- 권한 체크 (관리자/작성자)
+- 비정규화 (author_nickname, author_avatar_url)
+
+**TODO**:
+- Redis 조회수 캐싱 (IP 중복 방지)
+- 테스트 코드 작성
+- 배포 및 검증
+
+---
+
+## 📋 다음 작업 (우선순위)
+
+### 우선순위 1: 배포 안정화
+```
+1. 배포 성공 확인
+2. 서버 로그 검증
+3. API 테스트
+4. Supabase OAuth Provider 활성화
+   - Google OAuth 설정
+   - GitHub OAuth 설정
+```
+
+### 우선순위 1: Posts 모듈
+```
+Projects와 유사한 구조
++ 카테고리/태그 필터링
++ 읽기 시간 계산
+```
+
+### 우선순위 2: Redis 조회수 캐싱
+```
+1. CacheModule 활용
+2. IP 기반 중복 방지 (1시간)
+3. Projects/Posts 조회수 적용
+```
+
+### 우선순위 3: 소셜 기능
+```
+Comments 모듈
+Likes 모듈
+Views 처리
+```
+
+---
+
+## 🛠️ 기술 스택
+
+### Backend
 - **Framework**: NestJS 11.x
-- **Database**: Supabase PostgreSQL (스키마: `portfolio`)
-- **Cache**: Redis
-- **Auth**: JWT + OAuth (Google, GitHub)
-- **API Docs**: Swagger
-- **Monitoring**: Prometheus
-- **Deployment**: Docker Compose
+- **Language**: TypeScript 5.7
+- **ORM**: TypeORM 0.3
+- **Validation**: class-validator
 
-### 프론트엔드
-- **레포지토리**: `C:\hsm9411\portfolio-frontend` (이미 생성됨)
-- **백엔드**: `C:\hsm9411\portfolio-backend` (현재 프로젝트)
+### Database
+- **Primary**: Supabase PostgreSQL
+- **Schema**: portfolio
+- **Cache**: Redis 7-alpine
+
+### Authentication
+- **OAuth**: Supabase Auth (Google, GitHub)
+- **Local**: JWT + bcrypt
+- **Strategy**: SupabaseJwtStrategy, JwtStrategy
+
+### DevOps
+- **CI/CD**: GitHub Actions
+- **Container**: Docker, Docker Compose
+- **Deploy**: Oracle Cloud Free Tier
+- **Monitor**: Prometheus + Grafana
 
 ---
 
-## 🏗️ 아키텍처
+## 📁 파일 구조
 
 ```
 portfolio-backend/
 ├── src/
-│   ├── config/              # ✅ 설정 파일
-│   │   ├── database.config.ts
-│   │   └── redis.config.ts
-│   ├── entities/            # ✅ TypeORM 엔티티
-│   │   ├── user/user.entity.ts
-│   │   ├── project/project.entity.ts
-│   │   ├── post/post.entity.ts
-│   │   ├── comment/comment.entity.ts
-│   │   ├── like/like.entity.ts
-│   │   └── view/view.entity.ts
-│   ├── modules/             # ⏳ 기능 모듈 (TODO)
-│   │   ├── auth/            # OAuth + JWT
-│   │   ├── projects/        # 프로젝트 포트폴리오
-│   │   ├── posts/           # 블로그 글
-│   │   ├── comments/        # 댓글/대댓글
-│   │   └── likes/           # 좋아요
-│   ├── app.module.ts        # ✅ 메인 모듈
-│   └── main.ts              # ✅ 부트스트랩
-├── .env.example             # ✅ 환경 변수 예시
-├── .gitignore               # ✅ Git 무시 파일
-└── schema.sql               # ✅ DB 초기화 SQL
+│   ├── config/                     # ✅ 설정
+│   ├── entities/                   # ✅ 엔티티 (6개)
+│   ├── modules/
+│   │   ├── auth/                   # ✅ 인증 (완료)
+│   │   ├── projects/               # ✅ 완료
+│   │   ├── posts/                  # ⏳ 구현 대기
+│   │   ├── comments/               # ⏳ 구현 대기
+│   │   └── likes/                  # ⏳ 구현 대기
+│   ├── app.module.ts               # ✅
+│   └── main.ts                     # ✅
+├── migrations/                     # ✅ DB 마이그레이션
+│   └── 2026-02-09-add-supabase-oauth.sql
+├── schema.sql                      # ✅ 초기 스키마
+├── .env.example                    # ✅
+├── docker-compose.yml              # ✅
+├── Dockerfile                      # ✅
+├── .github/workflows/deploy.yml    # ✅ CI/CD
+├── docs/                           # ✅ 문서
+│   ├── AI_MEMORY.md               # ✅ 현재 파일
+│   ├── SESSION_RESUME.md          # ✅ 세션 재개
+│   ├── NEXT_TASKS.md              # ✅ 작업 목록
+│   └── DEPLOYMENT.md              # ✅ 배포 가이드
+└── README.md                       # ✅ 프로젝트 개요
 ```
 
 ---
 
-## 🗄️ 데이터베이스 스키마
+## 🗄️ Database Schema
 
-### Schema: `portfolio`
-
-#### 1. **users** (사용자)
-- OAuth 지원 (`provider`: local/google/github)
-- JWT 인증용
-- 관리자 플래그 (`is_admin`)
-
-**주요 필드**:
-```sql
-id, email, password, nickname, avatar_url,
-provider, provider_id, bio, github_url, linkedin_url,
-is_admin, created_at, updated_at
+### Users (사용자)
+```typescript
+id: uuid
+supabase_user_id: uuid        # Supabase auth.users 연결
+email: text (UNIQUE)
+password: text (nullable)     # OAuth 사용자는 null
+nickname: text
+avatar_url: text
+provider: text                # local, google, github, email
+provider_id: text             # OAuth Provider 고유 ID
+is_admin: boolean
+bio, github_url, linkedin_url, website_url
+created_at, updated_at
 ```
 
-#### 2. **projects** (프로젝트 포트폴리오)
-- 프로젝트 소개 및 상세 정보
-- 기술 스택, 태그, 데모/깃허브 URL
-- 조회수, 좋아요 카운터
-
-**주요 필드**:
-```sql
-id, title, summary, description, thumbnail_url,
-demo_url, github_url, tech_stack[], tags[], status,
-featured, view_count, like_count, start_date, end_date,
-author_id, author_nickname, author_avatar_url
+### Projects (프로젝트)
+```typescript
+id: uuid
+title, summary, description (Markdown)
+thumbnail_url, demo_url, github_url
+tech_stack: text[]            # ['NestJS', 'React', ...]
+tags: text[]                  # ['MSA', 'Redis', ...]
+status: text                  # in-progress, completed, archived
+view_count, like_count
+author_id (FK → users)
+# 비정규화
+author_nickname, author_avatar_url
+created_at, updated_at
 ```
 
-#### 3. **posts** (블로그 글)
-- 마크다운 지원
-- 카테고리 (tutorial/essay/review/news)
-- 태그, 썸네일, 예상 읽기 시간
-
-**주요 필드**:
-```sql
-id, title, summary, content, thumbnail_url, category,
-tags[], is_published, view_count, like_count,
-comment_count, reading_time, author_id
+### Posts (블로그)
+```typescript
+id: uuid
+title, content (Markdown)
+category: text                # 'backend', 'frontend', ...
+tags: text[]
+read_time_minutes: int        # 자동 계산
+view_count, like_count
+author_id (FK → users)
+# 비정규화
+author_nickname, author_avatar_url
+created_at, updated_at
 ```
 
-#### 4. **comments** (댓글/대댓글)
-- **Polymorphic**: 프로젝트 또는 포스트에 댓글
-- 대댓글 지원 (`parent_id`)
-- 익명/로그인 구분
-
-**주요 필드**:
-```sql
-id, content, target_type, target_id, parent_id,
-author_id (nullable), author_nickname, author_ip
+### Comments (댓글)
+```typescript
+id: uuid
+target_type: text             # 'project', 'post'
+target_id: uuid
+parent_id: uuid (nullable)    # 대댓글
+content: text
+author_id: uuid (nullable)    # 로그인 사용자
+author_nickname: text
+ip_address: inet              # 익명 사용자
+created_at, updated_at
 ```
 
-#### 5. **likes** (좋아요)
-- **Polymorphic**: 프로젝트/포스트/댓글에 좋아요
-- 로그인: `user_id` 기반
-- 익명: `ip_address` 기반
-- 중복 방지 (UNIQUE 제약)
-
-**주요 필드**:
-```sql
-id, target_type, target_id, user_id, ip_address
+### Likes (좋아요)
+```typescript
+id: uuid
+target_type: text             # 'project', 'post'
+target_id: uuid
+user_id: uuid (nullable)      # 로그인 사용자
+ip_address: inet              # 익명 사용자
+created_at
+# UNIQUE(target_type, target_id, user_id/ip_address)
 ```
 
-#### 6. **views** (조회수)
-- Redis 캐시 백업용
-- IP 기반 중복 카운트 방지
-
----
-
-## ✅ 완료된 작업 (2026-02-07)
-
-### 1. 프로젝트 초기화
-- ✅ NestJS CLI로 프로젝트 생성
-- ✅ 패키지 설치:
-  - TypeORM + PostgreSQL
-  - JWT + Passport (OAuth)
-  - Redis (cache-manager-redis-yet)
-  - Swagger
-  - Prometheus
-  - Class-validator/transformer
-
-### 2. 설정 파일
-- ✅ `.env.example`: 환경 변수 템플릿
-- ✅ `.gitignore`: Git 무시 파일
-- ✅ `config/database.config.ts`: TypeORM 설정
-- ✅ `config/redis.config.ts`: Redis 캐시 설정
-
-### 3. 데이터베이스
-- ✅ `schema.sql`: DB 초기화 SQL 작성
-- ✅ Entity 생성 (User, Project, Post, Comment, Like, View)
-- ✅ 인덱스 최적화 (Full-text search 포함)
-- ✅ RLS (Row Level Security) 정책
-
-### 4. 기본 설정
-- ✅ `main.ts`: Swagger, CORS, Validation Pipe 설정
-- ✅ `app.module.ts`: TypeORM, Redis, Prometheus 통합
-
----
-
-## 🚧 다음 작업 (우선순위)
-
-### Task #2: Auth 모듈 구현 (진행 예정)
-- [ ] Local 회원가입/로그인 (JWT)
-- [ ] Google OAuth 2.0
-- [ ] GitHub OAuth
-- [ ] JWT Strategy & Guard
-- [ ] 사용자 정보 조회 API
-
-### Task #3: Projects 모듈 구현
-- [ ] 프로젝트 CRUD
-- [ ] 조회수 카운터 (Redis)
-- [ ] 좋아요 기능
-- [ ] 필터링 (status, featured, tags)
-- [ ] 검색 (Full-text)
-
-### Task #4: Posts 모듈 구현
-- [ ] 블로그 글 CRUD
-- [ ] 카테고리/태그 필터링
-- [ ] 조회수 카운터
-- [ ] 좋아요 기능
-- [ ] 마크다운 파싱 (읽기 시간 계산)
-
-### Task #5: Comments 모듈 구현
-- [ ] 댓글 CRUD
-- [ ] 대댓글 (parent_id)
-- [ ] 익명/로그인 구분
-- [ ] 소프트 삭제 (is_deleted)
-
-### Task #6: Likes 모듈 구현
-- [ ] 좋아요 토글 (추가/취소)
-- [ ] 중복 방지 (user_id 또는 IP)
-- [ ] 카운터 동기화
-
-### Task #7: Docker 및 배포
-- [ ] Dockerfile 작성
-- [ ] docker-compose.yml (백엔드 + Redis)
-- [ ] nginx 설정 (API Gateway)
-- [ ] GitHub Actions CI/CD
-
----
-
-## 💡 핵심 설계 결정
-
-### 1. **Polymorphic Relationship**
-- `target_type` + `target_id`로 여러 타입 지원
-- 예: 댓글은 프로젝트 또는 포스트에 달림
-- 예: 좋아요는 프로젝트/포스트/댓글에 가능
-
-### 2. **비정규화 (Denormalization)**
-- 작성자 정보(`author_nickname`, `author_avatar_url`)를 직접 저장
-- MSA 패턴에서 서비스 간 JOIN 불가능 문제 해결
-- 조회 성능 향상
-
-### 3. **조회수 카운터**
-- **1차 캐시**: Redis (빠른 응답)
-- **2차 저장**: PostgreSQL `views` 테이블 (백업)
-- IP 기반 중복 방지 (1시간 TTL)
-
-### 4. **좋아요 중복 방지**
-- 로그인 사용자: `user_id` UNIQUE 제약
-- 익명 사용자: `ip_address` UNIQUE 제약
-
-### 5. **Full-text Search**
-- PostgreSQL GIN 인덱스 활용
-- `to_tsvector('english', title || ' ' || content)`
-
----
-
-## 🔧 개발 명령어
-
-### 로컬 개발
-```bash
-# 의존성 설치
-cd C:\hsm9411\portfolio-backend
-npm install
-
-# 개발 서버 실행
-npm run start:dev
-
-# Swagger 접속
-# http://localhost:3000/api
-```
-
-### 테스트
-```bash
-# 단위 테스트
-npm test
-
-# E2E 테스트
-npm run test:e2e
-```
-
-### 데이터베이스
-```bash
-# 1. Supabase SQL Editor에서 schema.sql 실행
-# 2. .env 파일 생성 (DATABASE_URL 설정)
+### Views (조회수)
+```typescript
+id: uuid
+target_type: text
+target_id: uuid
+ip_address: inet
+user_agent: text
+viewed_at: timestamptz
 ```
 
 ---
 
-## 📝 환경 변수 (.env)
+## 🔐 인증 흐름
 
-```env
-# Database
-DATABASE_URL=postgresql://postgres:password@host:5432/postgres?schema=portfolio
+### Supabase OAuth (현재 방식)
 
-# JWT
-JWT_SECRET=your_super_secret_key
-JWT_EXPIRES_IN=7d
+```
+1. Frontend → supabase.auth.signInWithOAuth({ provider: 'google' })
+2. Supabase Auth → Google 로그인 페이지
+3. 사용자 인증 → Supabase JWT 발급
+4. Frontend → JWT 저장
+5. Frontend → Backend API 호출 (Authorization: Bearer {JWT})
+6. Backend → SupabaseJwtStrategy가 JWT 검증
+7. Backend → portfolio.users 자동 생성/조회
+8. Backend → req.user에 User 객체 주입
+```
 
-# OAuth
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
+### Local Auth
 
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-
-# Server
-PORT=3000
-CORS_ORIGIN=http://localhost:5173
-FRONTEND_URL=http://localhost:5173
+```
+1. Frontend → POST /auth/register or /auth/login
+2. Backend → bcrypt 검증
+3. Backend → Local JWT 발급
+4. Frontend → JWT 저장
+5. Frontend → Backend API 호출
+6. Backend → JwtStrategy가 JWT 검증
 ```
 
 ---
 
-## 🐛 알려진 이슈
+## 🚀 배포 환경
 
-### 없음 (프로젝트 초기 단계)
+### Development (develop 브랜치)
+- **URL**: http://158.180.75.205:3001
+- **Swagger**: http://158.180.75.205:3001/api
+- **자동 배포**: develop 브랜치 push 시
 
----
+### Production (main 브랜치)
+- **URL**: http://158.180.75.205:3000
+- **Swagger**: http://158.180.75.205:3000/api
+- **자동 배포**: main 브랜치 push 시
 
-## 📚 참고 자료
-
-- **NestJS 공식 문서**: https://docs.nestjs.com/
-- **TypeORM 공식 문서**: https://typeorm.io/
-- **Supabase 공식 문서**: https://supabase.com/docs
-- **Passport OAuth 가이드**: https://www.passportjs.org/
-
----
-
-## 🎯 프로젝트 목표
-
-1. **포트폴리오 사이트**: 프로젝트 소개, 기술 스택, 데모 링크
-2. **기술 블로그**: 카테고리별 글, 마크다운 지원, 태그 검색
-3. **소셜 기능**: 조회수, 좋아요, 댓글/대댓글
-4. **OAuth 인증**: Google, GitHub 간편 로그인
-5. **검색 최적화**: Full-text search, 필터링
-6. **성능 최적화**: Redis 캐싱, DB 인덱싱
-
----
-
-## 📌 다음 세션 시작 전 체크리스트
-
-- [ ] Task #2 (Auth 모듈) 상태 확인
-- [ ] 환경 변수 설정 완료 확인
-- [ ] Supabase DB 스키마 적용 확인
-- [ ] Redis 서버 실행 확인
+### CI/CD Pipeline
+```
+1. GitHub Push (develop or main)
+2. GitHub Actions Trigger
+3. Docker Image Build
+4. Push to GitHub Container Registry
+5. SSH to Oracle Cloud Server
+6. Pull Image & Deploy
+7. Health Check
+```
 
 ---
 
-**마지막 업데이트**: 2026-02-07 (기본 설정 완료)
+## 📊 프로젝트 타임라인
+
+### 2026-02-07
+- ✅ 프로젝트 생성
+- ✅ Database Schema 설계
+- ✅ TypeORM Entities 생성
+- ✅ Auth 모듈 기본 구현 (Local + Passport OAuth)
+- ✅ CI/CD 구축
+- ✅ 첫 배포 성공
+
+### 2026-02-09
+- ✅ Supabase OAuth 전환 결정
+- ✅ SupabaseJwtStrategy 구현
+- ✅ Migration SQL 작성
+- ✅ 빌드 에러 수정 (2회)
+
+### 2026-02-10
+- ✅ Projects 모듈 CRUD 완전 구현
+- ✅ DTO (5개), Service, Controller, Module
+- ✅ Swagger 문서화 완료
+- ✅ 문서 업데이트 (README, AI_MEMORY)
+
+### 다음 예정
+- 🔄 Posts 모듈 구현
+- 🔄 Redis 조회수 캐싱
+- 🔄 Comments/Likes 모듈
+- 🔄 Frontend 통합
+
+---
+
+## 🐛 알려진 이슈 및 해결
+
+### Issue #1: Passport OAuth Strategy 빌드 에러
+**증상**: TypeScript 컴파일 실패
+**원인**: Google/GitHub Strategy 파일이 존재하지만 사용 안 함
+**해결**: `.backup` 확장자로 이름 변경
+**상태**: ✅ 해결됨
+
+### Issue #2: SupabaseJwtStrategy secretOrKey 타입 에러
+**증상**: `secretOrKey: string | undefined` 타입 불일치
+**원인**: ConfigService.get() 반환값이 undefined 가능
+**해결**: Fallback 값 추가 `|| 'fallback-secret'`
+**상태**: ✅ 해결됨
+
+### Issue #3: Supabase JWT Secret 혼동
+**증상**: Legacy JWT Secret vs New JWT Signing Keys 혼동
+**해결**: Legacy JWT Secret 사용 (여전히 유효)
+**상태**: ✅ 해결됨
+
+---
+
+## 🔑 중요 정보
+
+### Supabase
+- **Project URL**: https://vcegupzlmopajpqxttfo.supabase.co
+- **Project Ref**: vcegupzlmopajpqxttfo
+- **JWT Secret**: Legacy JWT Secret 사용
+
+### Oracle Cloud
+- **IP**: 158.180.75.205
+- **SSH User**: ubuntu
+
+### GitHub
+- **Repository**: https://github.com/hsm9411/portfolio-backend
+- **Actions**: https://github.com/hsm9411/portfolio-backend/actions
+
+---
+
+## 📝 작업 노트
+
+### OAuth 전환 결정 이유
+1. Frontend/Backend 간소화
+2. 자동 토큰 관리
+3. Supabase DB와 통합
+4. 코드 감소 (~220 lines)
+5. 검증된 보안
+6. 무료 Tier 충분 (50,000 MAU)
+
+### 코드 변경 요약
+- **제거**: Google/GitHub Strategy, OAuth Guards, OAuth 엔드포인트
+- **추가**: SupabaseJwtStrategy, supabase_user_id 컬럼
+- **수정**: AuthModule, AuthController, User Entity
+
+---
+
+## 📖 참고 문서
+
+- **README.md**: 프로젝트 개요, 설치 가이드
+- **SESSION_RESUME.md**: 다음 세션 시작 가이드
+- **NEXT_TASKS.md**: 상세 작업 목록
+- **DEPLOYMENT.md**: 배포 가이드
+- **CLAUDE.md**: 코딩 표준
+- **schema.sql**: DB 스키마
+
+---
+
+**Last Updated**: 2026-02-10 14:00
+**Status**: Projects 모듈 CRUD 구현 완료
+**Next**: Posts 모듈 구현, Redis 캐싱 적용

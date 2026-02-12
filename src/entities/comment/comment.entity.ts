@@ -4,46 +4,52 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 
-@Entity('comments', { schema: 'portfolio' })
+export enum TargetType {
+  PROJECT = 'project',
+  POST = 'post',
+}
+
+@Entity('comments')
+@Index(['targetType', 'targetId'])
+@Index(['parentId'])
 export class Comment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'text' })
-  content: string;
+  // Polymorphic 관계
+  @Column({ type: 'enum', enum: TargetType })
+  targetType: TargetType;
 
-  // Polymorphic relationship
-  @Column({ name: 'target_type' })
-  targetType: string; // 'project' or 'post'
-
-  @Column({ name: 'target_id', type: 'uuid' })
+  @Column('uuid')
   targetId: string;
 
-  // 대댓글 지원
-  @Column({ name: 'parent_id', type: 'uuid', nullable: true })
-  parentId: string;
+  @Column('text')
+  content: string;
 
-  // 익명/로그인 구분
-  @Column({ name: 'author_id', type: 'uuid', nullable: true })
-  authorId: string;
+  // 작성자 (로그인 필수)
+  @Column('uuid')
+  userId: string;
 
-  @Column({ name: 'author_nickname' })
-  authorNickname: string;
+  // 익명 여부 (Authenticated Anonymity)
+  @Column({ default: false })
+  isAnonymous: boolean;
 
-  @Column({ name: 'author_email', nullable: true })
-  authorEmail: string;
+  // 중첩 댓글 (Self-referencing)
+  @Column('uuid', { nullable: true })
+  parentId: string | null;
 
-  @Column({ name: 'author_ip', nullable: true })
-  authorIp: string;
+  @ManyToOne(() => Comment, { nullable: true })
+  @JoinColumn({ name: 'parentId' })
+  parent: Comment | null;
 
-  @Column({ name: 'is_deleted', default: false })
-  isDeleted: boolean;
-
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn()
   updatedAt: Date;
 }
