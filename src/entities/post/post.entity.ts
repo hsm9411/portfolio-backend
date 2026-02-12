@@ -30,24 +30,24 @@ export class Post {
   @Column('text', { array: true, default: [] })
   tags: string[];
 
-  @Column({ default: 0 })
+  @Column({ name: 'view_count', default: 0 })
   viewCount: number;
 
-  @Column({ default: 0 })
+  @Column({ name: 'like_count', default: 0 })
   likeCount: number;
 
-  @Column()
+  @Column({ name: 'author_id' })
   authorId: string;
 
-  @Column()
+  @Column({ name: 'author_nickname' })
   authorNickname: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'author_avatar_url', nullable: true })
   authorAvatarUrl: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
