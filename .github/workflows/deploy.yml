@@ -145,6 +145,7 @@ jobs:
           # Deploy with different ports (3001 for dev)
           ssh ${USER}@${HOST} "cd ~/portfolio-backend-dev && \
             sed -i 's/3000:3000/3001:3000/g' docker-compose.yml && \
+            sed -i 's/6379:6379/6380:6379/g' docker-compose.yml && \
             sed -i 's/portfolio-backend/portfolio-backend-dev/g' docker-compose.yml && \
             sed -i 's/portfolio-redis/portfolio-redis-dev/g' docker-compose.yml && \
             chmod +x deploy.sh && \
