@@ -35,7 +35,7 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       audience: 'authenticated', // Supabase 기본 audience
-      issuer: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
+      issuer: `${supabaseUrl}/auth/v1`,
       algorithms: ['ES256'], // 비대칭키 알고리즘
       
       // ✅ 핵심: JWKS 엔드포인트에서 공개키 동적 로드
@@ -43,7 +43,7 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
         cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
-        jwksUri: `${supabaseUrl}/auth/v1/jwks`,
+        jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
       }),
     });
   }
