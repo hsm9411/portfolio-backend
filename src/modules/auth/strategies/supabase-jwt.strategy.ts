@@ -36,7 +36,7 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
       ignoreExpiration: false,
       audience: 'authenticated', // Supabase 기본 audience
       issuer: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
-      algorithms: ['RS256', 'ES256'], // 비대칭키 알고리즘
+      algorithms: ['ES256'], // 비대칭키 알고리즘
       
       // ✅ 핵심: JWKS 엔드포인트에서 공개키 동적 로드
       secretOrKeyProvider: jwksRsa.passportJwtSecret({
