@@ -7,18 +7,14 @@ services:
     container_name: portfolio-nginx-dev
     restart: unless-stopped
     ports:
-      - "80:80"      # HTTP (Let's Encrypt ACME Challenge용)
-      - "443:443"    # HTTPS (실제 트래픽)
+      - "3001:80"      # HTTP (외부:3001 → 내부:80)
+      - "3443:443"     # HTTPS (외부:3443 → 내부:443)
     volumes:
       # Nginx 설정 파일
       - ./nginx/nginx-selfsigned.conf:/etc/nginx/conf.d/default.conf
       
       # Self-Signed SSL 인증서 (임시)
       - ./nginx/ssl:/etc/nginx/ssl
-      
-      # Let's Encrypt 인증서 (나중에 사용)
-      # - ./certbot/conf:/etc/letsencrypt
-      # - ./certbot/www:/var/www/certbot
       
       # Nginx 로그
       - ./nginx/logs:/var/log/nginx
@@ -27,10 +23,11 @@ services:
     networks:
       - portfolio-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 40s
 
   # ==========================================
   # NestJS Application
@@ -73,17 +70,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
-
-  # ==========================================
-  # Certbot (Let's Encrypt - 선택)
-  # ==========================================
-  # certbot:
-  #   image: certbot/certbot:latest
-  #   container_name: portfolio-certbot-dev
-  #   volumes:
-  #     - ./certbot/conf:/etc/letsencrypt
-  #     - ./certbot/www:/var/www/certbot
-  #   entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 networks:
   portfolio-network:
