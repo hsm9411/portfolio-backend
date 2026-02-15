@@ -1,0 +1,93 @@
+services:
+  # ==========================================
+  # Nginx Reverse Proxy (HTTPS Termination)
+  # ==========================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: portfolio-nginx-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"      # HTTP (Let's Encrypt ACME Challenge용)
+      - "443:443"    # HTTPS (실제 트래픽)
+    volumes:
+      # Nginx 설정 파일
+      - ./nginx/nginx-selfsigned.conf:/etc/nginx/conf.d/default.conf
+      
+      # Self-Signed SSL 인증서 (임시)
+      - ./nginx/ssl:/etc/nginx/ssl
+      
+      # Let's Encrypt 인증서 (나중에 사용)
+      # - ./certbot/conf:/etc/letsencrypt
+      # - ./certbot/www:/var/www/certbot
+      
+      # Nginx 로그
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================
+  # NestJS Application
+  # ==========================================
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG:-latest}
+    container_name: portfolio-backend-dev
+    restart: unless-stopped
+    # 포트 노출 제거 (Nginx를 통해서만 접근)
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================
+  # Redis Cache
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: portfolio-redis-dev
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ==========================================
+  # Certbot (Let's Encrypt - 선택)
+  # ==========================================
+  # certbot:
+  #   image: certbot/certbot:latest
+  #   container_name: portfolio-certbot-dev
+  #   volumes:
+  #     - ./certbot/conf:/etc/letsencrypt
+  #     - ./certbot/www:/var/www/certbot
+  #   entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  portfolio-network:
+    driver: bridge
+
+volumes:
+  redis-data:
