@@ -12,18 +12,18 @@ export enum LikeTargetType {
 }
 
 @Entity('likes', { schema: 'portfolio' })
-@Index(['target_type', 'target_id', 'user_id'], { unique: true })  // ✅ snake_case
+@Index(['targetType', 'targetId', 'userId'], { unique: true })  // ✅ Entity 필드명 사용
 export class Like {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   // Polymorphic 관계
   @Column({ 
-    name: 'target_type',
+    name: 'target_type',  // DB 컬럼명
     type: 'enum', 
     enum: LikeTargetType 
   })
-  targetType: LikeTargetType;
+  targetType: LikeTargetType;  // Entity 필드명
 
   @Column({ name: 'target_id', type: 'uuid' })
   targetId: string;

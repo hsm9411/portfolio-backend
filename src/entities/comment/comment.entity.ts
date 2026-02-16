@@ -15,19 +15,19 @@ export enum TargetType {
 }
 
 @Entity('comments', { schema: 'portfolio' })
-@Index(['target_type', 'target_id'])  // ✅ snake_case
-@Index(['parent_id'])                  // ✅ snake_case
+@Index(['targetType', 'targetId'])  // ✅ Entity 필드명 사용
+@Index(['parentId'])                 // ✅ Entity 필드명 사용
 export class Comment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   // Polymorphic 관계
   @Column({ 
-    name: 'target_type',
+    name: 'target_type',  // DB 컬럼명
     type: 'enum', 
     enum: TargetType 
   })
-  targetType: TargetType;
+  targetType: TargetType;  // Entity 필드명
 
   @Column({ name: 'target_id', type: 'uuid' })
   targetId: string;
