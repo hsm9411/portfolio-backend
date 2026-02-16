@@ -15,19 +15,18 @@ export enum TargetType {
 }
 
 @Entity('comments', { schema: 'portfolio' })
-@Index(['targetType', 'targetId'])  // ✅ Entity 필드명 사용
-@Index(['parentId'])                 // ✅ Entity 필드명 사용
+@Index(['targetType', 'targetId'])
+@Index(['parentId'])
 export class Comment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   // Polymorphic 관계
   @Column({ 
-    name: 'target_type',  // DB 컬럼명
-    type: 'enum', 
-    enum: TargetType 
+    name: 'target_type',
+    type: 'text'
   })
-  targetType: TargetType;  // Entity 필드명
+  targetType: TargetType;
 
   @Column({ name: 'target_id', type: 'uuid' })
   targetId: string;
@@ -35,13 +34,22 @@ export class Comment {
   @Column({ type: 'text' })
   content: string;
 
-  // 작성자 (로그인 필수)
-  @Column({ name: 'user_id', type: 'uuid' })
-  userId: string;
+  // 작성자 정보 (익명 댓글 지원)
+  @Column({ name: 'author_id', type: 'uuid' })
+  authorId: string;
 
-  // 익명 여부 (Authenticated Anonymity)
-  @Column({ name: 'is_anonymous', default: false })
-  isAnonymous: boolean;
+  @Column({ name: 'author_nickname', type: 'text' })
+  authorNickname: string;
+
+  @Column({ name: 'author_email', type: 'text' })
+  authorEmail: string;
+
+  @Column({ name: 'author_ip', type: 'text' })
+  authorIp: string;
+
+  // 삭제 여부
+  @Column({ name: 'is_deleted', type: 'boolean', default: false })
+  isDeleted: boolean;
 
   // 중첩 댓글 (Self-referencing)
   @Column({ name: 'parent_id', type: 'uuid', nullable: true })
