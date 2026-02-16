@@ -20,6 +20,8 @@ import * as jwksRsa from 'jwks-rsa';
  */
 @Injectable()
 export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jwt') {
+  private readonly adminEmails: string[];
+
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(User)
@@ -46,6 +48,15 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
         jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
       }),
     });
+
+    // 관리자 이메일 목록 로드
+    const adminEmailsStr = configService.get<string>('ADMIN_EMAILS') || '';
+    this.adminEmails = adminEmailsStr
+      .split(',')
+      .map(email => email.trim())
+      .filter(email => email.length > 0);
+
+    console.log('✅ 관리자 이메일 목록:', this.adminEmails);
   }
 
   /**
@@ -63,6 +74,9 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
       throw new UnauthorizedException('유효하지 않은 토큰입니다.');
     }
 
+    // 관리자 여부 확인
+    const isAdmin = this.adminEmails.includes(email);
+
     // portfolio.users에서 supabase_user_id로 조회
     let user = await this.userRepository.findOne({
       where: { supabaseUserId },
@@ -70,6 +84,7 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
 
     // 첫 로그인 시 사용자 생성
     if (!user) {
+      console.log(`✅ 신규 사용자 생성: ${email} (관리자: ${isAdmin})`);
       user = this.userRepository.create({
         supabaseUserId,
         email,
@@ -77,11 +92,20 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
         avatarUrl,
         provider,
         providerId,
+        isAdmin, // ✅ 관리자 권한 설정
       });
 
       await this.userRepository.save(user);
+    } else {
+      // 기존 사용자의 isAdmin 상태 업데이트 (환경 변수 변경 시)
+      if (user.isAdmin !== isAdmin) {
+        console.log(`🔄 관리자 권한 업데이트: ${email} (${user.isAdmin} → ${isAdmin})`);
+        user.isAdmin = isAdmin;
+        await this.userRepository.save(user);
+      }
     }
 
+    console.log(`🔍 사용자 검증 완료: ${email} (관리자: ${user.isAdmin})`);
     return user;
   }
 }
