@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Comment, TargetType } from '../../entities/comment';
 import { User } from '../../entities/user';
 import {
@@ -37,7 +37,9 @@ export class CommentsService {
 
     // User 정보 일괄 조회
     const userIds = [...new Set(comments.map((c) => c.userId))];
-    const users = await this.userRepository.findByIds(userIds);
+    const users = await this.userRepository.find({
+      where: { id: In(userIds) }
+    });
     const userMap = new Map(users.map((u) => [u.id, u]));
 
     // 마스킹 적용
