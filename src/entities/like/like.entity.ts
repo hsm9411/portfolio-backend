@@ -11,22 +11,26 @@ export enum LikeTargetType {
   POST = 'post',
 }
 
-@Entity('likes')
+@Entity('likes', { schema: 'portfolio' })
 @Index(['targetType', 'targetId', 'userId'], { unique: true })
 export class Like {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   // Polymorphic 관계
-  @Column({ type: 'enum', enum: LikeTargetType })
+  @Column({ 
+    name: 'target_type',
+    type: 'enum', 
+    enum: LikeTargetType 
+  })
   targetType: LikeTargetType;
 
-  @Column('uuid')
+  @Column({ name: 'target_id', type: 'uuid' })
   targetId: string;
 
-  @Column('uuid')
+  @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
