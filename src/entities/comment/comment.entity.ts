@@ -15,8 +15,8 @@ export enum TargetType {
 }
 
 @Entity('comments', { schema: 'portfolio' })
-@Index(['targetType', 'targetId'])
-@Index(['parentId'])
+@Index(['target_type', 'target_id'])  // ✅ snake_case
+@Index(['parent_id'])                  // ✅ snake_case
 export class Comment {
   @PrimaryGeneratedColumn('uuid')
   id: string;

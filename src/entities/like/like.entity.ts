@@ -12,7 +12,7 @@ export enum LikeTargetType {
 }
 
 @Entity('likes', { schema: 'portfolio' })
-@Index(['targetType', 'targetId', 'userId'], { unique: true })
+@Index(['target_type', 'target_id', 'user_id'], { unique: true })  // ✅ snake_case
 export class Like {
   @PrimaryGeneratedColumn('uuid')
   id: string;
