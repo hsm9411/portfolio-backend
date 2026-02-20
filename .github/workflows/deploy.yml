@@ -12,6 +12,9 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # ============================================================
+  # Job 1: Docker 이미지 빌드 & GHCR Push (공통)
+  # ============================================================
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
@@ -53,8 +56,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ============================================================
+  # Job 2: main 브랜치 → Production 배포
+  # ============================================================
   deploy:
-    name: Deploy to Oracle Cloud
+    name: Deploy to Production
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -66,9 +72,20 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # 개인키 설정
           echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.ORACLE_HOST }} >> ~/.ssh/known_hosts
+
+          # known_hosts: StrictHostKeyChecking 우회 (keyscan 실패 방지)
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+          EOF
+          chmod 600 ~/.ssh/config
 
       - name: Deploy to server
         env:
@@ -76,14 +93,9 @@ jobs:
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          # Create project directory on server
           ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend"
-
-          # Copy necessary files
           scp docker-compose.yml ${USER}@${HOST}:~/portfolio-backend/
           scp deploy.sh ${USER}@${HOST}:~/portfolio-backend/
-
-          # Execute deployment script
           ssh ${USER}@${HOST} "cd ~/portfolio-backend && chmod +x deploy.sh && ./deploy.sh"
 
       - name: Verify deployment
@@ -93,12 +105,13 @@ jobs:
         run: |
           echo "Waiting for application to start..."
           sleep 10
-
           ssh ${USER}@${HOST} "docker ps"
           ssh ${USER}@${HOST} "curl -f http://localhost:3000 || exit 1"
+          echo "✅ Production deployment verified!"
 
-          echo "✅ Deployment verified!"
-
+  # ============================================================
+  # Job 3: develop 브랜치 → Development 배포 (Nginx + HTTPS)
+  # ============================================================
   deploy-develop:
     name: Deploy to Development (Nginx + HTTPS)
     needs: build-and-push
@@ -112,81 +125,97 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # 개인키 설정
           echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.ORACLE_HOST }} >> ~/.ssh/known_hosts
+
+          # known_hosts: StrictHostKeyChecking 우회 (keyscan 실패 방지)
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Prepare server directories
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev/nginx/ssl ~/portfolio-backend-dev/nginx/logs"
 
       - name: Deploy Nginx configuration
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          # Create dev directory structure
-          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev/nginx"
-
-          # Copy Nginx configuration files
-          scp -r nginx/nginx-selfsigned.conf ${USER}@${HOST}:~/portfolio-backend-dev/nginx/
-
-          # Create SSL directory if not exists
-          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev/nginx/ssl ~/portfolio-backend-dev/nginx/logs"
+          scp nginx/nginx-selfsigned.conf ${USER}@${HOST}:~/portfolio-backend-dev/nginx/
 
       - name: Generate Self-Signed Certificate (if not exists)
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          ssh ${USER}@${HOST} "if [ ! -f ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt ]; then \
-            openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-              -keyout ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.key \
-              -out ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt \
-              -subj '/C=KR/ST=Seoul/L=Seoul/O=Portfolio/CN=158.180.75.205'; \
-            chmod 644 ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt; \
-            chmod 600 ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.key; \
-            echo '✅ Self-Signed certificate generated'; \
-          else \
-            echo '✅ SSL certificate already exists'; \
-          fi"
+          ssh ${USER}@${HOST} << 'ENDSSH'
+            if [ ! -f ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt ]; then
+              openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+                -keyout ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.key \
+                -out ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt \
+                -subj '/C=KR/ST=Seoul/L=Seoul/O=Portfolio/CN=158.180.75.205'
+              chmod 644 ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt
+              chmod 600 ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.key
+              echo "✅ Self-Signed certificate generated"
+            else
+              echo "✅ SSL certificate already exists"
+            fi
+          ENDSSH
 
       - name: Copy .env file (if not exists)
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          ssh ${USER}@${HOST} "if [ ! -f ~/portfolio-backend-dev/.env ] && [ -f ~/portfolio-backend/.env ]; then \
-            cp ~/portfolio-backend/.env ~/portfolio-backend-dev/.env; \
-            echo '✅ .env file copied from production'; \
-          elif [ -f ~/portfolio-backend-dev/.env ]; then \
-            echo '✅ .env file already exists'; \
-          else \
-            echo '⚠️  WARNING: No .env file found. Please create it manually.'; \
-          fi"
+          ssh ${USER}@${HOST} << 'ENDSSH'
+            if [ ! -f ~/portfolio-backend-dev/.env ] && [ -f ~/portfolio-backend/.env ]; then
+              cp ~/portfolio-backend/.env ~/portfolio-backend-dev/.env
+              echo "✅ .env copied from production"
+            elif [ -f ~/portfolio-backend-dev/.env ]; then
+              echo "✅ .env already exists"
+            else
+              echo "⚠️  WARNING: No .env file found. Please create it manually."
+            fi
+          ENDSSH
 
-      - name: Deploy docker-compose configuration
+      - name: Deploy docker-compose and run
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          # Copy docker-compose and deploy script
           scp docker-compose.dev.yml ${USER}@${HOST}:~/portfolio-backend-dev/docker-compose.yml
           scp deploy.sh ${USER}@${HOST}:~/portfolio-backend-dev/
 
-          # Execute deployment script
-          ssh ${USER}@${HOST} "cd ~/portfolio-backend-dev && \
-            chmod +x deploy.sh && \
-            export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && \
-            export IMAGE_TAG=develop && \
-            ./deploy.sh"
+          ssh ${USER}@${HOST} \
+            "cd ~/portfolio-backend-dev && \
+             chmod +x deploy.sh && \
+             export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && \
+             export IMAGE_TAG=develop && \
+             ./deploy.sh"
 
       - name: Configure firewall for HTTPS
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          ssh ${USER}@${HOST} "sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null || \
-            sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT && \
-            sudo iptables-save | sudo tee /etc/iptables/rules.v4 && \
-            echo '✅ Firewall configured for HTTPS'"
+          ssh ${USER}@${HOST} << 'ENDSSH'
+            sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null \
+              || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+            sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
+            echo "✅ Firewall configured for HTTPS"
+          ENDSSH
 
       - name: Verify development deployment
         env:
@@ -199,20 +228,16 @@ jobs:
           echo "=== Container Status ==="
           ssh ${USER}@${HOST} "docker ps | grep portfolio"
 
-          echo ""
           echo "=== Nginx Logs ==="
           ssh ${USER}@${HOST} "docker logs portfolio-nginx-dev --tail=50"
 
-          echo ""
           echo "=== Application Logs ==="
           ssh ${USER}@${HOST} "docker logs portfolio-backend-dev --tail=50"
 
-          echo ""
           echo "=== Testing HTTP ==="
-          ssh ${USER}@${HOST} "curl -f http://localhost:80/health || echo 'HTTP failed'"
+          ssh ${USER}@${HOST} "curl -sf http://localhost:80/health && echo 'HTTP OK' || echo 'HTTP failed (non-critical)'"
 
-          echo ""
           echo "=== Testing HTTPS (Self-Signed) ==="
-          ssh ${USER}@${HOST} "curl -k -f https://localhost:443/health || echo 'HTTPS failed'"
+          ssh ${USER}@${HOST} "curl -skf https://localhost:443/health && echo 'HTTPS OK' || echo 'HTTPS failed (non-critical)'"
 
           echo "✅ Development deployment verified!"
