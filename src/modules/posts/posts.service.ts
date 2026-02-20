@@ -46,10 +46,10 @@ export class PostsService {
     // ✅ 게시된 글만 조회
     query.andWhere('post.isPublished = :published', { published: true });
 
-    // 검색
+    // 검색 (title + summary만 검색 - content는 Full Table Scan 유발)
     if (dto.search) {
       query.andWhere(
-        '(post.title ILIKE :search OR post.content ILIKE :search)',
+        '(post.title ILIKE :search OR post.summary ILIKE :search)',
         { search: `%${dto.search}%` },
       );
     }

@@ -8,7 +8,9 @@ import {
   Param,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { CommentsService } from './comments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -21,6 +23,7 @@ import {
   UpdateCommentDto,
   CommentResponseDto,
 } from './dto';
+import { getClientIp } from '../../common/utils';
 
 @ApiTags('comments')
 @Controller('comments')
@@ -49,8 +52,10 @@ export class CommentsController {
     @Param('targetId') targetId: string,
     @CurrentUser() user: User,
     @Body() dto: CreateCommentDto,
+    @Req() req: Request,
   ): Promise<CommentResponseDto> {
-    return this.commentsService.create(user, targetType, targetId, dto);
+    const clientIp = getClientIp(req);
+    return this.commentsService.create(user, targetType, targetId, dto, clientIp);
   }
 
   @Put(':id')

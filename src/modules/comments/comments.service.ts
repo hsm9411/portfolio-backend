@@ -61,6 +61,7 @@ export class CommentsService {
     targetType: TargetType,
     targetId: string,
     dto: CreateCommentDto,
+    clientIp: string = '0.0.0.0',
   ): Promise<CommentResponseDto> {
     // 부모 댓글 검증
     if (dto.parentId) {
@@ -84,7 +85,7 @@ export class CommentsService {
       authorId: user.id,
       authorNickname: user.nickname,
       authorEmail: user.email,
-      authorIp: '0.0.0.0', // TODO: 실제 IP 추출
+      authorIp: clientIp,
       parentId: dto.parentId || null,
     });
 

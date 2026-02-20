@@ -1,8 +1,9 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { Post } from '../../entities/post';
 import { Project } from '../../entities/project';
 
@@ -25,9 +26,13 @@ export enum ViewTargetType {
  */
 @Injectable()
 export class ViewCountService {
+  private readonly logger = new Logger(ViewCountService.name);
   private readonly VIEW_IP_TTL = 24 * 60 * 60; // 24시간 (초 단위)
   private readonly VIEW_COUNT_PREFIX = 'view:count';
   private readonly VIEW_IP_PREFIX = 'view:ip';
+
+  // 조회수 동기화가 필요한 대상을 추적
+  private readonly trackedTargets = new Set<string>(); // 'post:uuid' or 'project:uuid'
 
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
@@ -66,6 +71,9 @@ export class ViewCountService {
     const currentCount = (await this.cacheManager.get<number>(countKey)) || 0;
     await this.cacheManager.set(countKey, currentCount + 1, 0); // TTL 없음 (명시적 삭제까지 유지)
 
+    // 동기화 대상으로 등록
+    this.trackedTargets.add(`${type}:${targetId}`);
+
     return true;
   }
 
@@ -97,18 +105,33 @@ export class ViewCountService {
   }
 
   /**
-   * Redis → DB 동기화 (Write-Back)
-   * 
-   * Cron Job이나 수동으로 호출하여 Redis 카운트를 DB에 반영
+   * [Cron] 매 30분마다 Redis → DB 동기화 (Write-Back)
+   *
+   * trackedTargets에 등록된 대상만 순회하므로 효율적
    */
+  @Cron(CronExpression.EVERY_30_MINUTES)
   async syncViewCountsToDB(): Promise<void> {
-    // 모든 view:count:* 키 조회
-    // Note: cache-manager는 keys() 메서드를 제공하지 않으므로
-    // 실제 구현 시 Redis 클라이언트를 직접 사용하거나
-    // 별도로 추적 중인 타겟 목록을 순회해야 함
-    
-    // 임시: 수동으로 타겟 지정 시 사용
-    console.log('View count sync to DB - implement with Redis SCAN or tracked targets');
+    if (this.trackedTargets.size === 0) {
+      return;
+    }
+
+    this.logger.log(`[ViewCount Cron] ${this.trackedTargets.size}개 대상 DB 동기화 시작`);
+
+    const targets = Array.from(this.trackedTargets);
+
+    for (const target of targets) {
+      try {
+        const [type, id] = target.split(':') as [ViewTargetType, string];
+        await this.syncSingleTarget(type, id);
+        // 동기화 성공 시 추적 목록에서 제거
+        this.trackedTargets.delete(target);
+      } catch (error) {
+        this.logger.error(`[ViewCount Cron] 동기화 실패: ${target}`, error);
+        // 실패한 항목은 다음 사이클에 재시도
+      }
+    }
+
+    this.logger.log('[ViewCount Cron] DB 동기화 완료');
   }
 
   /**

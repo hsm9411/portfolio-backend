@@ -8,6 +8,7 @@ import { getDatabaseConfig } from './config/database.config';
 import { getRedisConfig } from './config/redis.config';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { TerminusModule } from '@nestjs/terminus';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -54,6 +55,9 @@ import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-prox
         limit: 60, // 60회/분
       },
     ]),
+
+    // Cron Jobs
+    ScheduleModule.forRoot(),
 
     // Health Check
     TerminusModule,
