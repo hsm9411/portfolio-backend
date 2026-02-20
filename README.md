@@ -19,9 +19,9 @@
 
 ### 1. 인증 시스템 (Auth)
 - **Supabase OAuth**: Google, GitHub, Kakao 소셜 로그인
-- **Local Auth**: 이메일/비밀번호 회원가입 + 로그인
-- **JWT 검증**: Supabase JWT + Local JWT 이중 지원
-- **자동 사용자 연동**: OAuth 첫 로그인 시 users 테이블 자동 생성
+- **JWT 검증**: `jwks-rsa`로 ES256 비대칭키 검증
+- **자동 사용자 연동**: OAuth 첫 로그인 시 `portfolio.users` 테이블 자동 생성
+- **관리자 권한**: 환경변수 기반 자동 설정
 
 ### 2. 포트폴리오 (Projects)
 - **CRUD**: 프로젝트 생성/조회/수정/삭제
@@ -32,23 +32,23 @@
 - **권한 관리**: 관리자/작성자만 수정/삭제 가능
 
 ### 3. 블로그 (Posts)
-- **Slug 자동생성**: SEO 친화적 URL (unique 제약)
+- **ID 기반 URL**: `/posts/{id}` (SEO 최적화를 위해 slug는 제거)
+- **카테고리 시스템**: tutorial, essay, review, news
 - **Markdown 지원**: react-markdown 호환
 - **태그 시스템**: GIN 인덱스 기반 고속 검색
-- **읽기 시간**: 자동 계산 (read_time_minutes)
-- **메타 정보**: summary 필드 (메타 태그용)
+- **읽기 시간**: 자동 계산 (reading_time)
+- **게시 상태**: is_published 필터링
 
 ### 4. 댓글 시스템 (Comments)
 - **Polymorphic 관계**: project/post 통합 댓글
 - **대댓글 지원**: parent_id 기반 계층 구조
-- **인증 기반 익명**: 로그인 상태에서 익명 댓글 가능
-- **익명 마스킹**: 작성자/관리자에게만 원본 정보 표시
+- **익명 댓글**: 로그인 사용자의 선택적 익명 작성
 - **권한 제어**: 본인 댓글만 수정/삭제
 
 ### 5. 좋아요 (Likes)
 - **Polymorphic 관계**: project/post 통합 좋아요
 - **토글 방식**: 좋아요/취소 원자적 처리
-- **중복 방지**: DB UNIQUE 제약 + 서비스 로직
+- **중복 방지**: DB UNIQUE 제약
 - **실시간 카운트**: 트랜잭션 기반 증감
 
 ### 6. Redis 조회수 캐싱 (ViewCount)
@@ -86,7 +86,7 @@ Internet (Client)
 ┌──────────────┐    ┌──────────────────┐
 │ Redis Cache  │    │ Supabase         │
 │ (Container)  │    │ PostgreSQL       │
-│ - ViewCount  │    │ (External)       │
+│ - ViewCount  │    │ (portfolio)      │
 │ - Session    │    │                  │
 └──────────────┘    └──────────────────┘
 ```
@@ -108,10 +108,10 @@ Internet (Client)
    - TLS 1.2/1.3만 허용
    - Rate Limiting (NestJS Throttler)
 
-4. **No Mixed Content Issue**
-   - Frontend (Vercel HTTPS) → Backend (HTTPS)
-   - 완전한 HTTPS 체인
-   - Vercel Proxy 불필요
+4. **Portfolio Schema**
+   - Supabase의 `portfolio` schema 사용
+   - `public` schema와 분리하여 관리
+   - RLS (Row Level Security) 비활성화 (Backend가 Service Role 사용)
 
 ---
 
@@ -120,11 +120,13 @@ Internet (Client)
 ### Backend Framework
 - **NestJS**: 11.0.1 (Enterprise-grade Node.js framework)
 - **TypeScript**: 5.7.3 (Type-safe development)
-- **Passport**: JWT + OAuth 인증 전략
+- **Passport**: JWT 인증 전략
+- **jwks-rsa**: Supabase JWT 비대칭키 검증
 
 ### Database & ORM
 - **PostgreSQL**: Supabase (Managed PostgreSQL)
 - **TypeORM**: 0.3.28 (Active Record pattern)
+- **Schema**: `portfolio` (공식 프로덕션 schema)
 - **Redis**: 7-alpine (Cache & Session)
 
 ### Infrastructure
@@ -167,7 +169,7 @@ nano .env  # 환경변수 설정
 
 **필수 환경변수:**
 ```env
-# Database
+# Database (portfolio schema 사용)
 DATABASE_URL=postgresql://postgres:[password]@[host]:5432/postgres?schema=portfolio
 
 # Supabase
@@ -175,9 +177,8 @@ SUPABASE_URL=https://[project-ref].supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_JWT_SECRET=your-jwt-secret
 
-# JWT (Local)
-JWT_SECRET=your-local-jwt-secret
-JWT_EXPIRES_IN=7d
+# Admin (쉼표로 구분)
+ADMIN_EMAILS=admin@example.com,another@example.com
 
 # Redis
 REDIS_HOST=portfolio-redis-dev
@@ -192,16 +193,34 @@ NODE_ENV=production
 ```
 
 ### 3. Database Setup
-Supabase SQL Editor에서 **DATABASE_SETUP.md** 파일의 SQL을 순서대로 실행:
-1. Users 테이블
-2. Projects 테이블
-3. Posts 테이블 (**GIN 인덱스 필수**)
-4. Comments 테이블
-5. Likes 테이블
+
+#### Supabase SQL Editor에서 실행:
+
+```sql
+-- 1. Portfolio Schema 생성
+CREATE SCHEMA IF NOT EXISTS portfolio;
+
+-- 2. schema.sql 파일의 내용 전체 실행
+-- (Users, Projects, Posts, Comments, Likes, Views 테이블 생성)
+
+-- 3. RLS 비활성화 (중요!)
+ALTER TABLE portfolio.posts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.projects DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.comments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.likes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.views DISABLE ROW LEVEL SECURITY;
+
+-- 4. 확인
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'portfolio';
+-- 모든 테이블의 rowsecurity가 false여야 함
+```
+
+**중요:** Backend는 Service Role로 연결하므로 RLS는 불필요합니다. RLS를 켜면 오히려 문제가 발생할 수 있습니다.
 
 ### 4. Deploy to OCI (Dev Environment)
-
-**로컬 개발은 하지 않음** - OCI Dev 환경에서만 테스트
 
 ```bash
 # GitHub에 push하면 자동 배포
@@ -229,30 +248,33 @@ https://158.180.75.205/api  (Swagger UI)
 portfolio-backend/
 ├── nginx/
 │   ├── nginx-selfsigned.conf   # Nginx 설정 (Dev)
-│   ├── nginx.conf               # Nginx 설정 (Prod, 미사용)
 │   └── ssl/                     # Self-Signed 인증서
 ├── src/
 │   ├── config/
-│   │   ├── database.config.ts
+│   │   ├── database.config.ts   # schema: 'portfolio' 지정
 │   │   └── redis.config.ts
 │   ├── entities/
-│   │   ├── user.entity.ts
-│   │   ├── project.entity.ts
-│   │   ├── post.entity.ts
-│   │   ├── comment.entity.ts
-│   │   └── like.entity.ts
+│   │   ├── user/
+│   │   │   └── user.entity.ts   # @Entity('users', { schema: 'portfolio' })
+│   │   ├── project/
+│   │   │   └── project.entity.ts
+│   │   ├── post/
+│   │   │   └── post.entity.ts   # slug 제거, category 추가
+│   │   ├── comment/
+│   │   │   └── comment.entity.ts
+│   │   └── like/
+│   │       └── like.entity.ts
 │   ├── modules/
 │   │   ├── auth/                # ✅ 인증
 │   │   │   ├── strategies/
-│   │   │   │   ├── jwt.strategy.ts
-│   │   │   │   └── supabase-jwt.strategy.ts
+│   │   │   │   └── supabase-jwt.strategy.ts  # jwks-rsa 사용
 │   │   │   ├── guards/
 │   │   │   ├── dto/
 │   │   │   ├── auth.controller.ts
 │   │   │   ├── auth.service.ts
 │   │   │   └── auth.module.ts
 │   │   ├── projects/            # ✅ 프로젝트
-│   │   ├── posts/               # ✅ 블로그
+│   │   ├── posts/               # ✅ 블로그 (ID 기반)
 │   │   ├── comments/            # ✅ 댓글
 │   │   └── likes/               # ✅ 좋아요
 │   ├── common/
@@ -268,60 +290,11 @@ portfolio-backend/
 ├── .github/workflows/
 │   └── deploy.yml               # CI/CD
 ├── docker-compose.dev.yml       # Dev 환경 (Nginx + App + Redis)
-├── docker-compose.yml           # Prod 환경 (미사용)
 ├── Dockerfile
-├── DATABASE_SETUP.md
-├── DEPLOYMENT_CHECKLIST.md
+├── schema.sql                   # 전체 DB 스키마
 ├── .env.example
 └── README.md
 ```
-
----
-
-## 🚀 Deployment
-
-### CI/CD 자동 배포 (GitHub Actions)
-
-```bash
-# Development 환경 (현재 사용 중)
-git push origin develop
-# → https://158.180.75.205 (443)
-
-# 워크플로우:
-# 1. Docker 이미지 빌드
-# 2. GHCR에 푸시 (ghcr.io/hsm9411/portfolio-backend:develop)
-# 3. OCI 서버 SSH 접속
-# 4. docker-compose.dev.yml로 배포
-#    - Nginx (443) → NestJS (3000) → Redis (6379)
-```
-
-### Docker Compose 구조
-
-```yaml
-services:
-  nginx:              # HTTPS Reverse Proxy
-    ports:
-      - "443:443"     # HTTPS만 외부 노출
-    volumes:
-      - ./nginx/nginx-selfsigned.conf:/etc/nginx/conf.d/default.conf
-      - ./nginx/ssl:/etc/nginx/ssl
-  
-  app:                # NestJS Backend
-    expose:
-      - "3000"        # 내부 네트워크만
-  
-  redis:              # Redis Cache
-    expose:
-      - "6379"        # 내부 네트워크만
-```
-
-### 배포 후 필수 작업
-
-1. **DATABASE_SETUP.md 실행**: 테이블 생성 + GIN 인덱스
-2. **환경변수 확인**: CORS_ORIGINS, Supabase 키
-3. **SSL 인증서 확인**: `./nginx/ssl/` 디렉토리
-4. **Health Check**: `curl -k https://158.180.75.205/health`
-5. **Swagger 확인**: `https://158.180.75.205/api`
 
 ---
 
@@ -330,12 +303,14 @@ services:
 ### Users (사용자)
 ```typescript
 id: uuid (PK)
+supabase_user_id: uuid (UNIQUE, Supabase auth.users 연결)
 email: text (UNIQUE)
 password: text (nullable, OAuth 사용자는 null)
 nickname: text
 avatar_url: text
-is_admin: boolean
-supabase_user_id: uuid (UNIQUE, Supabase auth.users 연결)
+is_admin: boolean (환경변수 기반 자동 설정)
+provider: text ('local', 'google', 'github', 'email')
+provider_id: text
 created_at, updated_at
 ```
 
@@ -347,8 +322,10 @@ thumbnail_url, demo_url, github_url
 tech_stack: text[] (기술 스택 배열)
 tags: text[]
 status: 'in-progress' | 'completed' | 'archived'
+featured: boolean
 view_count, like_count
-author_id (FK → users)
+start_date, end_date
+author_id (FK → users.id)
 author_nickname, author_avatar_url (비정규화)
 created_at, updated_at
 ```
@@ -356,15 +333,22 @@ created_at, updated_at
 ### Posts (블로그)
 ```typescript
 id: uuid (PK)
-slug: text (UNIQUE, SEO 친화적)
-title, content (Markdown), summary
+title, summary, content (Markdown)
+thumbnail_url
+category: 'tutorial' | 'essay' | 'review' | 'news'
 tags: text[] (GIN 인덱스)
-read_time_minutes (자동 계산)
-view_count, like_count
-author_id (FK → users)
+is_published: boolean (기본값: true)
+view_count, like_count, comment_count
+reading_time: integer (자동 계산, 분)
+author_id (FK → users.id)
 author_nickname, author_avatar_url (비정규화)
-created_at, updated_at
+created_at, updated_at, published_at
 ```
+
+**중요 변경사항:**
+- ❌ **slug 제거**: SEO보다 단순성 우선
+- ✅ **category 추가**: 콘텐츠 분류
+- ✅ **is_published 추가**: 공개/비공개 관리
 
 ### Comments (댓글)
 ```typescript
@@ -373,8 +357,11 @@ target_type: 'project' | 'post' (Polymorphic)
 target_id: uuid
 parent_id: uuid (nullable, 대댓글)
 content: text
-user_id: uuid
-is_anonymous: boolean
+author_id: uuid (nullable, 익명 댓글)
+author_nickname: text
+author_email: text (nullable)
+author_ip: text (nullable, 익명용)
+is_deleted: boolean
 created_at, updated_at
 ```
 
@@ -395,32 +382,93 @@ created_at
 ### Supabase OAuth (Google/GitHub/Kakao)
 ```
 1. Frontend → supabase.auth.signInWithOAuth({ provider: 'google' })
-2. Supabase Auth → Google 로그인 페이지
-3. 사용자 인증 완료 → Supabase JWT 발급
+2. Supabase Auth → Provider 로그인 페이지
+3. 사용자 인증 완료 → Supabase JWT 발급 (ES256)
 4. Frontend → JWT 저장 (localStorage/cookie)
 5. Frontend → Backend API 호출 (Authorization: Bearer {JWT})
    → HTTPS로 Nginx 443 포트 요청
 6. Nginx → NestJS로 HTTP 프록시
-7. Backend → SupabaseJwtStrategy가 JWT 검증
-8. Backend → users 테이블 자동 생성/조회
+7. Backend → SupabaseJwtStrategy
+   ├─ jwks-rsa로 JWKS 엔드포인트에서 공개키 동적 로드
+   ├─ ES256 비대칭키로 JWT 검증
+   └─ payload.sub (Supabase User ID) 추출
+8. Backend → portfolio.users 테이블 조회/생성
+   ├─ supabase_user_id로 조회
+   ├─ 없으면 신규 생성
+   └─ 환경변수 ADMIN_EMAILS로 is_admin 자동 설정
 9. Backend → req.user에 User 객체 주입
 ```
 
-### Local Auth (Email/Password)
-```
-1. Frontend → POST https://158.180.75.205/auth/login
-2. Nginx → NestJS로 프록시
-3. Backend → bcrypt 비밀번호 검증
-4. Backend → Local JWT 발급
-5. Frontend → JWT 저장
-6. 이후 동일한 방식으로 API 호출
-```
+**핵심 보안:**
+- JWT Secret이 아닌 **공개키**로 검증 (비대칭키)
+- 공개키는 Supabase JWKS 엔드포인트에서 자동 갱신
+- Backend에서 Secret 관리 불필요
 
 ---
 
 ## 🎯 핵심 아키텍처 상세
 
-### 1. Nginx Reverse Proxy (HTTPS Termination)
+### 1. Portfolio Schema 사용
+
+**왜 portfolio schema를 사용하나?**
+- `public` schema와 분리하여 깔끔한 구조
+- 다중 프로젝트 관리 시 namespace 분리
+- Supabase의 자동 생성 테이블과 충돌 방지
+
+**Database Config:**
+```typescript
+// src/config/database.config.ts
+export const getDatabaseConfig = (
+  configService: ConfigService,
+): TypeOrmModuleOptions => ({
+  type: 'postgres',
+  url: configService.get<string>('DATABASE_URL'),
+  schema: 'portfolio',  // ✅ 명시적 지정
+  entities: [__dirname + '/../entities/**/*.entity{.ts,.js}'],
+  synchronize: false,
+  // ...
+});
+```
+
+**Entity 예시:**
+```typescript
+@Entity('posts', { schema: 'portfolio' })
+export class Post {
+  // ...
+}
+```
+
+**Table Editor에서 확인:**
+- Supabase Table Editor는 기본적으로 `public` schema만 표시
+- `portfolio` schema 확인은 SQL Editor 사용:
+  ```sql
+  SELECT * FROM portfolio.posts;
+  SELECT * FROM portfolio.projects;
+  ```
+
+### 2. RLS (Row Level Security) 정책
+
+**설정 방침:**
+```sql
+-- RLS 완전히 비활성화 (권장)
+ALTER TABLE portfolio.posts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.projects DISABLE ROW LEVEL SECURITY;
+-- ...
+```
+
+**이유:**
+1. Backend가 **Service Role**로 연결 (RLS 우회됨)
+2. Frontend는 **Backend API만 호출** (Supabase 직접 접근 안 함)
+3. 보안은 **Backend Guard**에서 담당
+4. RLS는 **중복 방어선**이자 **복잡도 증가**
+
+**보안 구조:**
+```
+[User] → [Frontend] → [Backend JWT Guard] → [Supabase (RLS OFF)]
+                       ✅ 실제 보안 계층
+```
+
+### 3. Nginx Reverse Proxy (HTTPS Termination)
 
 **역할:**
 - HTTPS 443 포트로 외부 트래픽 수신
@@ -444,7 +492,7 @@ server {
 }
 ```
 
-### 2. Redis 조회수 시스템 (Write-Back)
+### 4. Redis 조회수 시스템 (Write-Back)
 
 ```
 사용자 요청 (HTTPS)
@@ -461,27 +509,6 @@ IP 중복 체크 (Redis)
   └─ Cron Job: Redis → DB 동기화
 ```
 
-**장점:**
-- DB Write 부하 90% 감소
-- IP 기반 중복 방지 (24시간)
-- Nginx를 통한 실제 IP 전달
-
-### 3. Cloudflare 대응 (Optional)
-
-```typescript
-// IP 추출 우선순위
-1. CF-Connecting-IP       // Cloudflare 실제 IP
-2. X-Real-IP              // Nginx 전달
-3. X-Forwarded-For
-4. req.ip
-
-// Trust Proxy 설정
-app.set('trust proxy', true);
-
-// Rate Limiting
-60회/분 (글로벌)
-```
-
 ---
 
 ## 📚 API Documentation
@@ -493,8 +520,7 @@ app.set('trust proxy', true);
 
 #### Auth
 ```
-POST   /auth/register          # 회원가입
-POST   /auth/login             # 로그인
+POST   /auth/callback          # OAuth 콜백 (Supabase)
 GET    /auth/me                # 현재 사용자 (JWT 필요)
 ```
 
@@ -510,25 +536,28 @@ DELETE /projects/:id           # 삭제 (작성자/관리자, JWT)
 #### Posts
 ```
 GET    /posts                  # 목록 (페이징, 검색, 태그)
-GET    /posts/:slug            # Slug 조회 (조회수 자동 증가)
-POST   /posts                  # 작성 (로그인, JWT)
+GET    /posts/:id              # ID 조회 (조회수 자동 증가)
+POST   /posts                  # 작성 (로그인, JWT, category 필수)
 PUT    /posts/:id              # 수정 (작성자, JWT)
 DELETE /posts/:id              # 삭제 (작성자, JWT)
 ```
 
+**중요 변경사항:**
+- ❌ `GET /posts/:slug` 제거
+- ✅ `GET /posts/:id` 사용
+- ✅ POST/PUT 시 `category` 필드 필수
+
 #### Comments
 ```
-GET    /comments               # 목록 (target 필터)
-GET    /comments/:id           # 단일 조회
-POST   /comments               # 작성 (로그인)
-PATCH  /comments/:id           # 수정 (작성자, JWT)
-DELETE /comments/:id           # 삭제 (작성자, JWT)
+GET    /comments/:targetType/:targetId  # 목록
+POST   /comments/:targetType/:targetId  # 작성 (로그인)
+PUT    /comments/:id                    # 수정 (작성자, JWT)
+DELETE /comments/:id                    # 삭제 (작성자, JWT)
 ```
 
 #### Likes
 ```
 POST   /likes/toggle           # 좋아요 토글 (JWT)
-GET    /likes/check            # 좋아요 여부 (JWT)
 ```
 
 ---
@@ -558,16 +587,79 @@ docker-compose ps
 
 # Nginx 설정 테스트
 docker exec portfolio-nginx-dev nginx -t
-
-# SSL 인증서 확인
-openssl x509 -in nginx/ssl/nginx-selfsigned.crt -text -noout
 ```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### 1. HTTPS 접속 불가
+### 1. 다른 기기에서 데이터가 안 보임
+
+**증상:** 
+- 본인 컴퓨터: 정상
+- 다른 컴퓨터: 빈 화면
+
+**원인 체크:**
+```sql
+-- 1. RLS 상태 확인
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'portfolio';
+
+-- 2. 데이터 존재 확인
+SELECT COUNT(*) FROM portfolio.posts;
+SELECT COUNT(*) FROM portfolio.projects;
+
+-- 3. Schema 확인
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_name IN ('posts', 'projects');
+```
+
+**해결:**
+```sql
+-- RLS 비활성화
+ALTER TABLE portfolio.posts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.projects DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.comments DISABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio.likes DISABLE ROW LEVEL SECURITY;
+```
+
+### 2. Table Editor에서 테이블이 안 보임
+
+**증상:** 
+- SQL Editor에서는 데이터 보임
+- Table Editor는 "This table is empty"
+
+**원인:**
+- Table Editor는 `public` schema만 표시
+- 실제 테이블은 `portfolio` schema에 존재
+
+**해결:**
+- SQL Editor 사용 권장:
+  ```sql
+  SELECT * FROM portfolio.posts;
+  SELECT * FROM portfolio.projects;
+  ```
+
+### 3. JWT 인증 실패
+
+**증상:**
+- 401 Unauthorized
+- "Invalid token" 에러
+
+**체크:**
+```typescript
+// .env 확인
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_JWT_SECRET=your-secret  // JWT Secret이 아닌 Project Secret
+```
+
+**해결:**
+- Supabase Dashboard → Settings → API → JWT Secret 복사
+- `SUPABASE_URL`이 정확한지 확인 (trailing slash 없이)
+
+### 4. HTTPS 접속 불가
 ```bash
 # Nginx 컨테이너 확인
 docker ps | grep nginx
@@ -579,28 +671,7 @@ docker logs portfolio-nginx-dev
 netstat -tlnp | grep 443
 ```
 
-### 2. SSL 인증서 오류
-```bash
-# 브라우저에서 "안전하지 않음" 경고 → 정상 (Self-Signed)
-# 고급 → 계속 진행 클릭
-
-# 인증서 재생성 (필요시)
-cd nginx/ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout nginx-selfsigned.key \
-  -out nginx-selfsigned.crt
-```
-
-### 3. Backend 연결 실패
-```bash
-# NestJS 로그 확인
-docker logs portfolio-backend-dev
-
-# Nginx → Backend 연결 테스트
-docker exec portfolio-nginx-dev curl http://portfolio-backend-dev:3000/health
-```
-
-### 4. Redis 연결 실패
+### 5. Redis 연결 실패
 ```bash
 # Redis 상태 확인
 docker exec portfolio-redis-dev redis-cli ping
@@ -610,18 +681,13 @@ docker exec portfolio-redis-dev redis-cli ping
 docker exec portfolio-redis-dev redis-cli KEYS "view:*"
 ```
 
-### 5. Mixed Content (발생하지 않음)
-- Backend가 HTTPS로 제공되므로 문제 없음
-- Frontend (Vercel HTTPS) → Backend (HTTPS)
-- Nginx가 HTTPS 처리
-
 ---
 
 ## 📖 참고 문서
 
 | 문서 | 설명 |
 |------|------|
-| `DATABASE_SETUP.md` | DB 테이블 생성 SQL (필수) |
+| `schema.sql` | 전체 DB 스키마 (portfolio schema) |
 | `DEPLOYMENT_CHECKLIST.md` | 배포 후 체크리스트 |
 | `QUICK_START.md` | 빠른 시작 가이드 |
 | `.env.example` | 환경 변수 템플릿 |
@@ -651,6 +717,23 @@ perf:     성능
 
 ---
 
+## 📝 주요 변경 이력
+
+### 2026-02-20
+- ✅ Post Entity에서 `slug` 제거, ID 기반 URL로 변경
+- ✅ `category` 필드 추가 (tutorial, essay, review, news)
+- ✅ `is_published` 필드 추가 및 Service 레이어 필터링 적용
+- ✅ RLS 비활성화로 접근 문제 해결
+- ✅ Portfolio schema 명시적 사용
+- ✅ Frontend와 Backend 완전 동기화
+
+### 2026-02-17
+- ✅ Supabase OAuth 전환 (Local OAuth 제거)
+- ✅ jwks-rsa 기반 ES256 JWT 검증 구현
+- ✅ 환경변수 기반 관리자 권한 자동 설정
+
+---
+
 ## 📄 License
 
 MIT License
@@ -665,6 +748,6 @@ MIT License
 
 ---
 
-**Last Updated**: 2026-02-17  
+**Last Updated**: 2026-02-20  
 **Status**: Production Ready ✅  
-**Tech Stack**: NestJS 11 | TypeORM 0.3 | Supabase PostgreSQL | Redis 7 | Nginx 1.25 | Docker | OCI
+**Tech Stack**: NestJS 11 | TypeORM 0.3 | Supabase PostgreSQL (portfolio schema) | Redis 7 | Nginx 1.25 | Docker | OCI
