@@ -62,6 +62,9 @@ export class PostsService {
   async findAll(dto: GetPostsDto): Promise<PaginatedPostsResponseDto> {
     const query = this.postRepository.createQueryBuilder('post');
 
+    // ✅ 게시된 글만 조회
+    query.andWhere('post.isPublished = :published', { published: true });
+
     // 검색
     if (dto.search) {
       query.andWhere(
@@ -96,7 +99,9 @@ export class PostsService {
    * Slug로 글 조회
    */
   async findBySlug(slug: string): Promise<Post> {
-    const post = await this.postRepository.findOne({ where: { slug } });
+    const post = await this.postRepository.findOne({ 
+      where: { slug, isPublished: true }  // ✅ 게시된 글만
+    });
 
     if (!post) {
       throw new NotFoundException('글을 찾을 수 없습니다.');
@@ -133,6 +138,7 @@ export class PostsService {
       ...dto,
       slug,
       summary,
+      isPublished: true,  // ✅ 기본값
       authorId: user.id,
       authorNickname: user.nickname,
       authorAvatarUrl: user.avatarUrl,

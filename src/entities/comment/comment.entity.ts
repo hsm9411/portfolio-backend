@@ -35,17 +35,17 @@ export class Comment {
   content: string;
 
   // 작성자 정보 (익명 댓글 지원)
-  @Column({ name: 'author_id', type: 'uuid' })
-  authorId: string;
+  @Column({ name: 'author_id', type: 'uuid', nullable: true })
+  authorId: string | null;
 
   @Column({ name: 'author_nickname', type: 'text' })
   authorNickname: string;
 
-  @Column({ name: 'author_email', type: 'text' })
-  authorEmail: string;
+  @Column({ name: 'author_email', type: 'text', nullable: true })
+  authorEmail: string | null;
 
-  @Column({ name: 'author_ip', type: 'text' })
-  authorIp: string;
+  @Column({ name: 'author_ip', type: 'text', nullable: true })
+  authorIp: string | null;
 
   // 삭제 여부
   @Column({ name: 'is_deleted', type: 'boolean', default: false })

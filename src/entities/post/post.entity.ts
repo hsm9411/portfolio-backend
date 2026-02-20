@@ -7,7 +7,7 @@ import {
   Index,
 } from 'typeorm';
 
-@Entity('posts')
+@Entity('posts', { schema: 'portfolio' })
 @Index(['slug'], { unique: true })
 // GIN 인덱스는 마이그레이션으로 생성: CREATE INDEX idx_posts_tags ON posts USING GIN (tags);
 @Index('idx_posts_tags', { synchronize: false })
@@ -29,6 +29,9 @@ export class Post {
 
   @Column('text', { array: true, default: [] })
   tags: string[];
+
+  @Column({ name: 'is_published', default: true })
+  isPublished: boolean;
 
   @Column({ name: 'view_count', default: 0 })
   viewCount: number;
