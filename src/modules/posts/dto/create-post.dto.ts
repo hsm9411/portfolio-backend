@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional, MinLength, IsEnum } from 'class-validator';
+import { IsString, IsArray, IsOptional, MinLength, IsEnum, IsUrl } from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty({ example: 'NestJS 마이크로서비스 아키텍처' })
@@ -29,4 +29,9 @@ export class CreatePostDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({ example: 'https://example.com/thumbnail.png' })
+  @IsOptional()
+  @IsUrl()
+  thumbnailUrl?: string;
 }
