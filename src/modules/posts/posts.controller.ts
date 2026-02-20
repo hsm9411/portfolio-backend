@@ -42,14 +42,14 @@ export class PostsController {
     return this.postsService.findAll(dto);
   }
 
-  @Get(':slug')
+  @Get(':id')
   @SkipThrottle()
-  @ApiOperation({ summary: 'Slug로 글 조회 (Redis 조회수 캐싱)' })
-  async findBySlug(
-    @Param('slug') slug: string,
+  @ApiOperation({ summary: 'ID로 글 조회 (Redis 조회수 캐싱)' })
+  async findOne(
+    @Param('id') id: string,
     @Req() req: Request,
   ): Promise<PostResponseDto> {
-    const post = await this.postsService.findBySlug(slug);
+    const post = await this.postsService.findOne(id);
     
     // Redis 기반 조회수 증가 (IP 중복 방지, 24시간 TTL)
     const clientIp = getClientIp(req);

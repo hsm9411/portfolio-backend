@@ -8,24 +8,25 @@ import {
 } from 'typeorm';
 
 @Entity('posts', { schema: 'portfolio' })
-@Index(['slug'], { unique: true })
-// GIN 인덱스는 마이그레이션으로 생성: CREATE INDEX idx_posts_tags ON posts USING GIN (tags);
 @Index('idx_posts_tags', { synchronize: false })
 export class Post {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
-  slug: string;
-
   @Column()
   title: string;
 
   @Column('text')
+  summary: string;
+
+  @Column('text')
   content: string;
 
-  @Column({ nullable: true })
-  summary: string;
+  @Column({ name: 'thumbnail_url', nullable: true })
+  thumbnailUrl: string;
+
+  @Column()
+  category: string; // 'tutorial', 'essay', 'review', 'news'
 
   @Column('text', { array: true, default: [] })
   tags: string[];
@@ -38,6 +39,12 @@ export class Post {
 
   @Column({ name: 'like_count', default: 0 })
   likeCount: number;
+
+  @Column({ name: 'comment_count', default: 0 })
+  commentCount: number;
+
+  @Column({ name: 'reading_time', nullable: true })
+  readingTime: number;
 
   @Column({ name: 'author_id' })
   authorId: string;
@@ -53,4 +60,7 @@ export class Post {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
+  publishedAt: Date;
 }
