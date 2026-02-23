@@ -82,7 +82,7 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-      - name: Prepare server
+      - name: Prepare directories and network
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -90,13 +90,16 @@ jobs:
           ssh ${USER}@${HOST} "docker network inspect global-portfolio-network >/dev/null 2>&1 || docker network create global-portfolio-network"
           ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/prod ~/portfolio-backend/nginx/ssl/dev ~/portfolio-backend/nginx/logs"
 
-      - name: Deploy Nginx config
+      - name: Deploy files
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          scp docker-compose.yml              ${USER}@${HOST}:~/portfolio-backend/docker-compose.yml
           scp docker-compose.nginx.yml        ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
           scp nginx/conf.d/portfolio.conf     ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
+          scp deploy.sh                       ${USER}@${HOST}:~/portfolio-backend/deploy.sh
 
       - name: Start or reload Nginx
         env:
@@ -104,11 +107,12 @@ jobs:
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} "
+            cd ~/portfolio-backend
             if docker ps --format '{{.Names}}' | grep -q '^portfolio-nginx$'; then
               docker exec portfolio-nginx nginx -t && docker exec portfolio-nginx nginx -s reload
-              echo 'Nginx config reloaded'
+              echo 'Nginx reloaded'
             else
-              cd ~/portfolio-backend && docker compose -f docker-compose.nginx.yml up -d
+              docker compose -f docker-compose.nginx.yml up -d
               echo 'Nginx started'
             fi
           "
@@ -119,16 +123,7 @@ jobs:
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          scp docker-compose.yml ${USER}@${HOST}:~/portfolio-backend/
-          scp deploy.sh          ${USER}@${HOST}:~/portfolio-backend/
           ssh ${USER}@${HOST} "cd ~/portfolio-backend && chmod +x deploy.sh && export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && export IMAGE_TAG=latest && ./deploy.sh"
-
-      - name: Reload Nginx after deploy
-        env:
-          HOST: ${{ secrets.ORACLE_HOST }}
-          USER: ${{ secrets.ORACLE_USER }}
-        run: |
-          ssh ${USER}@${HOST} "docker exec portfolio-nginx nginx -s reload && echo 'Nginx reloaded'"
 
       - name: Verify deployment
         env:
@@ -136,7 +131,7 @@ jobs:
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           sleep 15
-          ssh ${USER}@${HOST} "docker ps | grep portfolio-backend"
+          ssh ${USER}@${HOST} "docker ps | grep portfolio"
           ssh ${USER}@${HOST} "curl -sf https://hsm9411.duckdns.org/health && echo 'HTTPS OK' || echo 'health check done'"
           echo "Production deployment verified!"
 
@@ -166,13 +161,38 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-      - name: Prepare server
+      - name: Prepare directories and network
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} "docker network inspect global-portfolio-network >/dev/null 2>&1 || docker network create global-portfolio-network"
+          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/prod ~/portfolio-backend/nginx/ssl/dev ~/portfolio-backend/nginx/logs"
           ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev"
+
+      - name: Deploy Nginx files
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          scp docker-compose.nginx.yml        ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
+          scp nginx/conf.d/portfolio.conf     ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
+
+      - name: Start or reload Nginx
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "
+            cd ~/portfolio-backend
+            if docker ps --format '{{.Names}}' | grep -q '^portfolio-nginx$'; then
+              docker exec portfolio-nginx nginx -t && docker exec portfolio-nginx nginx -s reload
+              echo 'Nginx reloaded'
+            else
+              docker compose -f docker-compose.nginx.yml up -d
+              echo 'Nginx started'
+            fi
+          "
 
       - name: Deploy application
         env:
@@ -180,16 +200,9 @@ jobs:
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          scp docker-compose.dev.yml ${USER}@${HOST}:~/portfolio-backend-dev/docker-compose.yml
-          scp deploy.sh              ${USER}@${HOST}:~/portfolio-backend-dev/
+          scp docker-compose.dev.yml  ${USER}@${HOST}:~/portfolio-backend-dev/docker-compose.yml
+          scp deploy.sh               ${USER}@${HOST}:~/portfolio-backend-dev/deploy.sh
           ssh ${USER}@${HOST} "cd ~/portfolio-backend-dev && chmod +x deploy.sh && export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && export IMAGE_TAG=develop && ./deploy.sh"
-
-      - name: Reload Nginx after deploy
-        env:
-          HOST: ${{ secrets.ORACLE_HOST }}
-          USER: ${{ secrets.ORACLE_USER }}
-        run: |
-          ssh ${USER}@${HOST} "docker exec portfolio-nginx nginx -s reload && echo 'Nginx reloaded'"
 
       - name: Verify deployment
         env:
@@ -197,6 +210,6 @@ jobs:
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           sleep 15
-          ssh ${USER}@${HOST} "docker ps | grep portfolio-backend-dev"
+          ssh ${USER}@${HOST} "docker ps | grep portfolio"
           ssh ${USER}@${HOST} "curl -sf https://hsm9411-dev.duckdns.org/health && echo 'HTTPS OK' || echo 'health check done'"
           echo "Development deployment verified!"
