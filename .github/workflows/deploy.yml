@@ -154,22 +154,20 @@ jobs:
         run: |
           scp nginx/nginx-selfsigned.conf ${USER}@${HOST}:~/portfolio-backend-dev/nginx/
 
-      - name: Generate Self-Signed Certificate (if not exists)
+      - name: Verify Let's Encrypt certificate exists
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} << 'ENDSSH'
-            if [ ! -f ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt ]; then
-              openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-                -keyout ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.key \
-                -out ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt \
-                -subj '/C=KR/ST=Seoul/L=Seoul/O=Portfolio/CN=158.180.75.205'
-              chmod 644 ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.crt
-              chmod 600 ~/portfolio-backend-dev/nginx/ssl/nginx-selfsigned.key
-              echo "✅ Self-Signed certificate generated"
+            if [ ! -f ~/portfolio-backend-dev/nginx/ssl/fullchain.pem ]; then
+              echo "❌ Let's Encrypt certificate not found!"
+              echo "   Run: sudo certbot certonly --authenticator dns-duckdns ..."
+              exit 1
             else
-              echo "✅ SSL certificate already exists"
+              # 만료일 확인
+              EXPIRY=$(openssl x509 -enddate -noout -in ~/portfolio-backend-dev/nginx/ssl/fullchain.pem | cut -d= -f2)
+              echo "✅ Certificate exists. Expires: ${EXPIRY}"
             fi
           ENDSSH
 
@@ -237,7 +235,7 @@ jobs:
           echo "=== Testing HTTP ==="
           ssh ${USER}@${HOST} "curl -sf http://localhost:80/health && echo 'HTTP OK' || echo 'HTTP failed (non-critical)'"
 
-          echo "=== Testing HTTPS (Self-Signed) ==="
-          ssh ${USER}@${HOST} "curl -skf https://localhost:443/health && echo 'HTTPS OK' || echo 'HTTPS failed (non-critical)'"
+          echo "=== Testing HTTPS (Let's Encrypt) ==="
+          ssh ${USER}@${HOST} "curl -sf https://hsm9411.duckdns.org/health && echo 'HTTPS OK' || echo 'HTTPS check done'"
 
           echo "✅ Development deployment verified!"
