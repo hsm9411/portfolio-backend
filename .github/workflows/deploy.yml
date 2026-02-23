@@ -95,8 +95,8 @@ jobs:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          scp docker-compose.nginx.yml            ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
-          scp nginx/conf.d/portfolio.conf         ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
+          scp docker-compose.nginx.yml        ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
+          scp nginx/conf.d/portfolio.conf     ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
 
       - name: Start or reload Nginx
         env:
@@ -173,23 +173,6 @@ jobs:
         run: |
           ssh ${USER}@${HOST} "docker network inspect global-portfolio-network >/dev/null 2>&1 || docker network create global-portfolio-network"
           ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev"
-
-      - name: Verify Let's Encrypt certificates
-        env:
-          HOST: ${{ secrets.ORACLE_HOST }}
-          USER: ${{ secrets.ORACLE_USER }}
-        run: |
-          ssh ${USER}@${HOST} "
-            for DOMAIN in hsm9411.duckdns.org hsm9411-dev.duckdns.org; do
-              CERT=\"/etc/letsencrypt/live/\${DOMAIN}/fullchain.pem\"
-              if [ ! -f \"\$CERT\" ]; then
-                echo \"Certificate not found: \${DOMAIN}\"
-                exit 1
-              fi
-              EXPIRY=\$(openssl x509 -enddate -noout -in \"\$CERT\" | cut -d= -f2)
-              echo \"\${DOMAIN} - Expires: \${EXPIRY}\"
-            done
-          "
 
       - name: Deploy application
         env:
