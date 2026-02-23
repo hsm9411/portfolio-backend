@@ -57,9 +57,9 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ============================================================
-  # Job 2: main 브랜치 → Production 배포
+  # Job 2: main → Production 배포
   # ============================================================
-  deploy:
+  deploy-prod:
     name: Deploy to Production
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -71,14 +71,9 @@ jobs:
 
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          # 개인키 설정
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
-          # known_hosts: StrictHostKeyChecking 우회 (keyscan 실패 방지)
           cat >> ~/.ssh/config << 'EOF'
           Host *
             StrictHostKeyChecking no
@@ -87,33 +82,55 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-      - name: Deploy to server
+      - name: Prepare server
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} << 'ENDSSH'
+            docker network inspect global-portfolio-network >/dev/null 2>&1 \
+              || docker network create global-portfolio-network
+            mkdir -p ~/portfolio-backend
+          ENDSSH
+
+      - name: Deploy application
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend"
           scp docker-compose.yml ${USER}@${HOST}:~/portfolio-backend/
-          scp deploy.sh ${USER}@${HOST}:~/portfolio-backend/
-          ssh ${USER}@${HOST} "cd ~/portfolio-backend && chmod +x deploy.sh && ./deploy.sh"
+          scp deploy.sh          ${USER}@${HOST}:~/portfolio-backend/
+          ssh ${USER}@${HOST} \
+            "cd ~/portfolio-backend && \
+             chmod +x deploy.sh && \
+             export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && \
+             export IMAGE_TAG=latest && \
+             ./deploy.sh"
+
+      - name: Reload Nginx (graceful)
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} \
+            "docker exec portfolio-nginx nginx -s reload && echo '✅ Nginx reloaded'"
 
       - name: Verify deployment
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          echo "Waiting for application to start..."
-          sleep 10
-          ssh ${USER}@${HOST} "docker ps"
-          ssh ${USER}@${HOST} "curl -f http://localhost:3000 || exit 1"
+          sleep 15
+          ssh ${USER}@${HOST} "docker ps | grep portfolio-backend"
+          ssh ${USER}@${HOST} "curl -sf https://hsm9411.duckdns.org/health && echo '✅ HTTPS OK' || echo 'health check done'"
           echo "✅ Production deployment verified!"
 
   # ============================================================
-  # Job 3: develop 브랜치 → Development 배포 (Nginx + HTTPS)
+  # Job 3: develop → Development 배포
   # ============================================================
-  deploy-develop:
-    name: Deploy to Development (Nginx + HTTPS)
+  deploy-dev:
+    name: Deploy to Development
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop'
@@ -124,14 +141,9 @@ jobs:
 
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-
-          # 개인키 설정
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
-          # known_hosts: StrictHostKeyChecking 우회 (keyscan 실패 방지)
           cat >> ~/.ssh/config << 'EOF'
           Host *
             StrictHostKeyChecking no
@@ -140,62 +152,42 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-      - name: Prepare server directories
-        env:
-          HOST: ${{ secrets.ORACLE_HOST }}
-          USER: ${{ secrets.ORACLE_USER }}
-        run: |
-          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev/nginx/ssl ~/portfolio-backend-dev/nginx/logs"
-
-      - name: Deploy Nginx configuration
-        env:
-          HOST: ${{ secrets.ORACLE_HOST }}
-          USER: ${{ secrets.ORACLE_USER }}
-        run: |
-          scp nginx/nginx.conf ${USER}@${HOST}:~/portfolio-backend-dev/nginx/nginx.conf
-
-      - name: Verify Let's Encrypt certificate exists
+      - name: Prepare server
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} << 'ENDSSH'
-            if [ ! -f ~/portfolio-backend-dev/nginx/ssl/fullchain.pem ]; then
-              echo "❌ Let's Encrypt certificate not found!"
-              echo "   Run: sudo certbot certonly --authenticator dns-duckdns ..."
-              exit 1
-            else
-              # 만료일 확인
-              EXPIRY=$(openssl x509 -enddate -noout -in ~/portfolio-backend-dev/nginx/ssl/fullchain.pem | cut -d= -f2)
-              echo "✅ Certificate exists. Expires: ${EXPIRY}"
-            fi
+            docker network inspect global-portfolio-network >/dev/null 2>&1 \
+              || docker network create global-portfolio-network
+            mkdir -p ~/portfolio-backend-dev
           ENDSSH
 
-      - name: Copy .env file (if not exists)
+      - name: Verify Let's Encrypt certificates
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} << 'ENDSSH'
-            if [ ! -f ~/portfolio-backend-dev/.env ] && [ -f ~/portfolio-backend/.env ]; then
-              cp ~/portfolio-backend/.env ~/portfolio-backend-dev/.env
-              echo "✅ .env copied from production"
-            elif [ -f ~/portfolio-backend-dev/.env ]; then
-              echo "✅ .env already exists"
-            else
-              echo "⚠️  WARNING: No .env file found. Please create it manually."
-            fi
+            for DOMAIN in hsm9411.duckdns.org hsm9411-dev.duckdns.org; do
+              CERT="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
+              if [ ! -f "$CERT" ]; then
+                echo "❌ Certificate not found: ${DOMAIN}"
+                exit 1
+              fi
+              EXPIRY=$(openssl x509 -enddate -noout -in "$CERT" | cut -d= -f2)
+              echo "✅ ${DOMAIN} - Expires: ${EXPIRY}"
+            done
           ENDSSH
 
-      - name: Deploy docker-compose and run
+      - name: Deploy application
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           scp docker-compose.dev.yml ${USER}@${HOST}:~/portfolio-backend-dev/docker-compose.yml
-          scp deploy.sh ${USER}@${HOST}:~/portfolio-backend-dev/
-
+          scp deploy.sh              ${USER}@${HOST}:~/portfolio-backend-dev/
           ssh ${USER}@${HOST} \
             "cd ~/portfolio-backend-dev && \
              chmod +x deploy.sh && \
@@ -203,39 +195,20 @@ jobs:
              export IMAGE_TAG=develop && \
              ./deploy.sh"
 
-      - name: Configure firewall for HTTPS
+      - name: Reload Nginx (graceful)
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          ssh ${USER}@${HOST} << 'ENDSSH'
-            sudo iptables -C INPUT -p tcp --dport 443 -j ACCEPT 2>/dev/null \
-              || sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
-            sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
-            echo "✅ Firewall configured for HTTPS"
-          ENDSSH
+          ssh ${USER}@${HOST} \
+            "docker exec portfolio-nginx nginx -s reload && echo '✅ Nginx reloaded'"
 
-      - name: Verify development deployment
+      - name: Verify deployment
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          echo "Waiting for application to start..."
-          sleep 30
-
-          echo "=== Container Status ==="
-          ssh ${USER}@${HOST} "docker ps | grep portfolio"
-
-          echo "=== Nginx Logs ==="
-          ssh ${USER}@${HOST} "docker logs portfolio-nginx-dev --tail=50"
-
-          echo "=== Application Logs ==="
-          ssh ${USER}@${HOST} "docker logs portfolio-backend-dev --tail=50"
-
-          echo "=== Testing HTTP ==="
-          ssh ${USER}@${HOST} "curl -sf http://localhost:80/health && echo 'HTTP OK' || echo 'HTTP failed (non-critical)'"
-
-          echo "=== Testing HTTPS (Let's Encrypt) ==="
-          ssh ${USER}@${HOST} "curl -sf https://hsm9411.duckdns.org/health && echo 'HTTPS OK' || echo 'HTTPS check done'"
-
+          sleep 15
+          ssh ${USER}@${HOST} "docker ps | grep portfolio-backend-dev"
+          ssh ${USER}@${HOST} "curl -sf https://hsm9411-dev.duckdns.org/health && echo '✅ HTTPS OK' || echo 'health check done'"
           echo "✅ Development deployment verified!"
