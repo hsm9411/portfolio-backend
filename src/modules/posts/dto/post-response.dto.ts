@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Post } from '../../../entities/post';
 
 export class PostResponseDto {
@@ -6,19 +6,25 @@ export class PostResponseDto {
   id: string;
 
   @ApiProperty()
-  slug: string;
-
-  @ApiProperty()
   title: string;
-
-  @ApiProperty()
-  content: string;
 
   @ApiProperty()
   summary: string;
 
   @ApiProperty()
+  content: string;
+
+  @ApiPropertyOptional()
+  thumbnailUrl?: string;
+
+  @ApiProperty()
+  category: string;
+
+  @ApiProperty()
   tags: string[];
+
+  @ApiProperty()
+  isPublished: boolean;
 
   @ApiProperty()
   viewCount: number;
@@ -27,19 +33,28 @@ export class PostResponseDto {
   likeCount: number;
 
   @ApiProperty()
+  commentCount: number;
+
+  @ApiPropertyOptional()
+  readingTime?: number;
+
+  @ApiProperty()
   authorId: string;
 
   @ApiProperty()
   authorNickname: string;
 
-  @ApiProperty()
-  authorAvatarUrl: string;
+  @ApiPropertyOptional()
+  authorAvatarUrl?: string;
 
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiPropertyOptional()
+  publishedAt?: Date;
 }
 
 export class PaginatedPostsResponseDto {

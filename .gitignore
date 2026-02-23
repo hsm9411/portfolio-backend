@@ -70,3 +70,13 @@ docker-compose.override.yml
 # Database
 *.sqlite
 *.db
+
+
+# Nginx 로그 디렉토리
+nginx/logs/
+
+# Self-Signed SSL 인증서
+nginx/ssl/
+
+# Let's Encrypt 인증서
+certbot/

@@ -14,7 +14,7 @@ export enum TargetType {
   POST = 'post',
 }
 
-@Entity('comments')
+@Entity('comments', { schema: 'portfolio' })
 @Index(['targetType', 'targetId'])
 @Index(['parentId'])
 export class Comment {
@@ -22,34 +22,46 @@ export class Comment {
   id: string;
 
   // Polymorphic 관계
-  @Column({ type: 'enum', enum: TargetType })
+  @Column({ 
+    name: 'target_type',
+    type: 'text'
+  })
   targetType: TargetType;
 
-  @Column('uuid')
+  @Column({ name: 'target_id', type: 'uuid' })
   targetId: string;
 
-  @Column('text')
+  @Column({ type: 'text' })
   content: string;
 
-  // 작성자 (로그인 필수)
-  @Column('uuid')
-  userId: string;
+  // 작성자 정보 (익명 댓글 지원)
+  @Column({ name: 'author_id', type: 'uuid', nullable: true })
+  authorId: string | null;
 
-  // 익명 여부 (Authenticated Anonymity)
-  @Column({ default: false })
-  isAnonymous: boolean;
+  @Column({ name: 'author_nickname', type: 'text' })
+  authorNickname: string;
+
+  @Column({ name: 'author_email', type: 'text', nullable: true })
+  authorEmail: string | null;
+
+  @Column({ name: 'author_ip', type: 'text', nullable: true })
+  authorIp: string | null;
+
+  // 삭제 여부
+  @Column({ name: 'is_deleted', type: 'boolean', default: false })
+  isDeleted: boolean;
 
   // 중첩 댓글 (Self-referencing)
-  @Column('uuid', { nullable: true })
+  @Column({ name: 'parent_id', type: 'uuid', nullable: true })
   parentId: string | null;
 
   @ManyToOne(() => Comment, { nullable: true })
-  @JoinColumn({ name: 'parentId' })
+  @JoinColumn({ name: 'parent_id' })
   parent: Comment | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

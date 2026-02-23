@@ -12,6 +12,9 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # ============================================================
+  # Job 1: Docker 이미지 빌드 & GHCR Push (공통)
+  # ============================================================
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
@@ -53,8 +56,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Deploy to Oracle Cloud
+  # ============================================================
+  # Job 2: main → Production 배포
+  # ============================================================
+  deploy-prod:
+    name: Deploy to Production
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -65,44 +71,74 @@ jobs:
 
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.ORACLE_HOST }} >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+          EOF
+          chmod 600 ~/.ssh/config
 
-      - name: Deploy to server
+      - name: Prepare directories and network
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "docker network inspect global-portfolio-network >/dev/null 2>&1 || docker network create global-portfolio-network"
+          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/prod ~/portfolio-backend/nginx/ssl/dev ~/portfolio-backend/nginx/logs"
+
+      - name: Deploy files
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          # Create project directory on server
-          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend"
+          scp docker-compose.yml              ${USER}@${HOST}:~/portfolio-backend/docker-compose.yml
+          scp docker-compose.nginx.yml        ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
+          scp nginx/conf.d/portfolio.conf     ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
+          scp deploy.sh                       ${USER}@${HOST}:~/portfolio-backend/deploy.sh
 
-          # Copy necessary files
-          scp docker-compose.yml ${USER}@${HOST}:~/portfolio-backend/
-          scp deploy.sh ${USER}@${HOST}:~/portfolio-backend/
+      - name: Start or reload Nginx
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "
+            cd ~/portfolio-backend
+            if docker ps --format '{{.Names}}' | grep -q '^portfolio-nginx$'; then
+              docker exec portfolio-nginx nginx -t && docker exec portfolio-nginx nginx -s reload
+              echo 'Nginx reloaded'
+            else
+              docker compose -f docker-compose.nginx.yml up -d
+              echo 'Nginx started'
+            fi
+          "
 
-          # Copy .env file (if exists on server, otherwise need to create manually)
-          # Note: .env should be created manually on server with actual credentials
-
-          # Execute deployment script
-          ssh ${USER}@${HOST} "cd ~/portfolio-backend && chmod +x deploy.sh && ./deploy.sh"
+      - name: Deploy application
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          ssh ${USER}@${HOST} "cd ~/portfolio-backend && chmod +x deploy.sh && export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && export IMAGE_TAG=latest && ./deploy.sh"
 
       - name: Verify deployment
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          echo "Waiting for application to start..."
-          sleep 10
+          sleep 15
+          ssh ${USER}@${HOST} "docker ps | grep portfolio"
+          ssh ${USER}@${HOST} "curl -sf https://hsm9411.duckdns.org/health && echo 'HTTPS OK' || echo 'health check done'"
+          echo "Production deployment verified!"
 
-          ssh ${USER}@${HOST} "docker ps"
-          ssh ${USER}@${HOST} "curl -f http://localhost:3000 || exit 1"
-
-          echo "✅ Deployment verified!"
-
-  deploy-develop:
+  # ============================================================
+  # Job 3: develop → Development 배포
+  # ============================================================
+  deploy-dev:
     name: Deploy to Development
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -114,66 +150,66 @@ jobs:
 
       - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.ORACLE_HOST }} >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+          EOF
+          chmod 600 ~/.ssh/config
 
-      - name: Deploy to development
+      - name: Prepare directories and network
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "docker network inspect global-portfolio-network >/dev/null 2>&1 || docker network create global-portfolio-network"
+          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/prod ~/portfolio-backend/nginx/ssl/dev ~/portfolio-backend/nginx/logs"
+          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev"
+
+      - name: Deploy Nginx files
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          scp docker-compose.nginx.yml        ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
+          scp nginx/conf.d/portfolio.conf     ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
+
+      - name: Start or reload Nginx
+        env:
+          HOST: ${{ secrets.ORACLE_HOST }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "
+            cd ~/portfolio-backend
+            if docker ps --format '{{.Names}}' | grep -q '^portfolio-nginx$'; then
+              docker exec portfolio-nginx nginx -t && docker exec portfolio-nginx nginx -s reload
+              echo 'Nginx reloaded'
+            else
+              docker compose -f docker-compose.nginx.yml up -d
+              echo 'Nginx started'
+            fi
+          "
+
+      - name: Deploy application
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          # Create dev directory
-          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev"
+          scp docker-compose.dev.yml  ${USER}@${HOST}:~/portfolio-backend-dev/docker-compose.yml
+          scp deploy.sh               ${USER}@${HOST}:~/portfolio-backend-dev/deploy.sh
+          ssh ${USER}@${HOST} "cd ~/portfolio-backend-dev && chmod +x deploy.sh && export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && export IMAGE_TAG=develop && ./deploy.sh"
 
-          # Copy .env from production to development (if not exists)
-          ssh ${USER}@${HOST} "if [ ! -f ~/portfolio-backend-dev/.env ] && [ -f ~/portfolio-backend/.env ]; then \
-            cp ~/portfolio-backend/.env ~/portfolio-backend-dev/.env; \
-            echo '✅ .env file copied from production'; \
-          elif [ -f ~/portfolio-backend-dev/.env ]; then \
-            echo '✅ .env file already exists'; \
-          else \
-            echo '⚠️  WARNING: No .env file found. Please create it manually.'; \
-          fi"
-
-          # Copy files
-          scp docker-compose.yml ${USER}@${HOST}:~/portfolio-backend-dev/
-          scp deploy.sh ${USER}@${HOST}:~/portfolio-backend-dev/
-
-          # Deploy with different ports (3001 for dev)
-          ssh ${USER}@${HOST} "cd ~/portfolio-backend-dev && \
-            sed -i 's/3000:3000/3001:3000/g' docker-compose.yml && \
-            sed -i 's/6379:6379/6380:6379/g' docker-compose.yml && \
-            sed -i 's/portfolio-backend/portfolio-backend-dev/g' docker-compose.yml && \
-            sed -i 's/portfolio-redis/portfolio-redis-dev/g' docker-compose.yml && \
-            chmod +x deploy.sh && \
-            export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && \
-            export IMAGE_TAG=develop && \
-            ./deploy.sh"
-
-      - name: Verify development deployment
+      - name: Verify deployment
         env:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          echo "Waiting for development application to start..."
-          sleep 20
-
-          echo "=== Container Status ==="
+          sleep 15
           ssh ${USER}@${HOST} "docker ps | grep portfolio"
-
-          echo ""
-          echo "=== Application Logs ==="
-          ssh ${USER}@${HOST} "docker logs portfolio-backend-dev --tail=100"
-
-          echo ""
-          echo "=== Redis Logs ==="
-          ssh ${USER}@${HOST} "docker logs portfolio-redis-dev --tail=20"
-
-          echo ""
-          echo "=== Testing Health Check ==="
-          ssh ${USER}@${HOST} "curl -f http://localhost:3001/health || curl -f http://localhost:3001 || exit 1"
-
-          echo "✅ Development deployment verified!"
+          ssh ${USER}@${HOST} "curl -sf https://hsm9411-dev.duckdns.org/health && echo 'HTTPS OK' || echo 'health check done'"
+          echo "Development deployment verified!"

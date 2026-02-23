@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Comment, TargetType } from '../../entities/comment';
 import { User } from '../../entities/user';
 import {
@@ -31,19 +31,26 @@ export class CommentsService {
     currentUserId?: string,
   ): Promise<CommentResponseDto[]> {
     const comments = await this.commentRepository.find({
-      where: { targetType, targetId },
+      where: { targetType, targetId, isDeleted: false },
       order: { createdAt: 'ASC' },
     });
 
-    // User 정보 일괄 조회
-    const userIds = [...new Set(comments.map((c) => c.userId))];
-    const users = await this.userRepository.findByIds(userIds);
-    const userMap = new Map(users.map((u) => [u.id, u]));
-
-    // 마스킹 적용
-    return comments.map((comment) =>
-      this.maskComment(comment, userMap.get(comment.userId)!, currentUserId),
-    );
+    return comments.map((comment) => ({
+      id: comment.id,
+      content: comment.content,
+      targetType: comment.targetType,
+      targetId: comment.targetId,
+      isAnonymous: false, // 현재 스키마에는 익명 필드 없음
+      isMine: currentUserId === comment.authorId,
+      user: {
+        id: comment.authorId,
+        nickname: comment.authorNickname,
+        avatarUrl: null, // 현재 스키마에 없음
+      },
+      parentId: comment.parentId,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+    }));
   }
 
   /**
@@ -54,6 +61,7 @@ export class CommentsService {
     targetType: TargetType,
     targetId: string,
     dto: CreateCommentDto,
+    clientIp: string = '0.0.0.0',
   ): Promise<CommentResponseDto> {
     // 부모 댓글 검증
     if (dto.parentId) {
@@ -71,16 +79,34 @@ export class CommentsService {
     }
 
     const comment = this.commentRepository.create({
-      ...dto,
+      content: dto.content,
       targetType,
       targetId,
-      userId: user.id,
-      isAnonymous: dto.isAnonymous || false,
+      authorId: user.id,
+      authorNickname: user.nickname,
+      authorEmail: user.email,
+      authorIp: clientIp,
+      parentId: dto.parentId || null,
     });
 
     const saved = await this.commentRepository.save(comment);
 
-    return this.maskComment(saved, user, user.id);
+    return {
+      id: saved.id,
+      content: saved.content,
+      targetType: saved.targetType,
+      targetId: saved.targetId,
+      isAnonymous: false,
+      isMine: true,
+      user: {
+        id: user.id,
+        nickname: user.nickname,
+        avatarUrl: user.avatarUrl,
+      },
+      parentId: saved.parentId,
+      createdAt: saved.createdAt,
+      updatedAt: saved.updatedAt,
+    };
   }
 
   /**
@@ -97,14 +123,29 @@ export class CommentsService {
       throw new NotFoundException('댓글을 찾을 수 없습니다.');
     }
 
-    if (comment.userId !== user.id) {
+    if (comment.authorId !== user.id) {
       throw new ForbiddenException('댓글 수정 권한이 없습니다.');
     }
 
     comment.content = dto.content;
     const updated = await this.commentRepository.save(comment);
 
-    return this.maskComment(updated, user, user.id);
+    return {
+      id: updated.id,
+      content: updated.content,
+      targetType: updated.targetType,
+      targetId: updated.targetId,
+      isAnonymous: false,
+      isMine: true,
+      user: {
+        id: user.id,
+        nickname: user.nickname,
+        avatarUrl: user.avatarUrl,
+      },
+      parentId: updated.parentId,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    };
   }
 
   /**
@@ -117,83 +158,12 @@ export class CommentsService {
       throw new NotFoundException('댓글을 찾을 수 없습니다.');
     }
 
-    if (comment.userId !== user.id && !user.isAdmin) {
+    if (comment.authorId !== user.id && !user.isAdmin) {
       throw new ForbiddenException('댓글 삭제 권한이 없습니다.');
     }
 
-    await this.commentRepository.remove(comment);
-  }
-
-  /**
-   * 익명 마스킹 로직
-   * 
-   * - 작성자 본인 또는 Admin: 원본 user 정보 반환, isMine: true
-   * - 익명 댓글이고 타인: user를 { nickname: '익명', id: null, avatarUrl: null }로 마스킹
-   */
-  private maskComment(
-    comment: Comment,
-    author: User,
-    currentUserId?: string,
-  ): CommentResponseDto {
-    const isMine = currentUserId === comment.userId;
-    const isAdmin = currentUserId && author.isAdmin;
-
-    // 본인이거나 Admin이면 원본 정보 노출
-    if (isMine || isAdmin) {
-      return {
-        id: comment.id,
-        content: comment.content,
-        targetType: comment.targetType,
-        targetId: comment.targetId,
-        isAnonymous: comment.isAnonymous,
-        isMine: true,
-        user: {
-          id: author.id,
-          nickname: author.nickname,
-          avatarUrl: author.avatarUrl,
-        },
-        parentId: comment.parentId,
-        createdAt: comment.createdAt,
-        updatedAt: comment.updatedAt,
-      };
-    }
-
-    // 익명 댓글 + 타인: 마스킹
-    if (comment.isAnonymous) {
-      return {
-        id: comment.id,
-        content: comment.content,
-        targetType: comment.targetType,
-        targetId: comment.targetId,
-        isAnonymous: true,
-        isMine: false,
-        user: {
-          id: null,
-          nickname: '익명',
-          avatarUrl: null,
-        },
-        parentId: comment.parentId,
-        createdAt: comment.createdAt,
-        updatedAt: comment.updatedAt,
-      };
-    }
-
-    // 일반 댓글
-    return {
-      id: comment.id,
-      content: comment.content,
-      targetType: comment.targetType,
-      targetId: comment.targetId,
-      isAnonymous: false,
-      isMine: false,
-      user: {
-        id: author.id,
-        nickname: author.nickname,
-        avatarUrl: author.avatarUrl,
-      },
-      parentId: comment.parentId,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-    };
+    // Soft delete
+    comment.isDeleted = true;
+    await this.commentRepository.save(comment);
   }
 }

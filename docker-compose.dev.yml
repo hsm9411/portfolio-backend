@@ -1,7 +1,7 @@
 services:
   app:
     image: ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG:-latest}
-    container_name: portfolio-backend
+    container_name: portfolio-backend-dev
     restart: unless-stopped
     # 포트 외부 노출 없음 - 통합 Nginx가 global-portfolio-network 통해 접근
     expose:
@@ -22,14 +22,14 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: portfolio-redis
+    container_name: portfolio-redis-dev
     restart: unless-stopped
     expose:
       - "6379"
     volumes:
       - redis-data:/data
     networks:
-      - internal        # app과만 통신, Nginx에는 노출 안 함
+      - internal        # app과만 통신
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
