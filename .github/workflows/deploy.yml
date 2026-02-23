@@ -152,7 +152,7 @@ jobs:
           HOST: ${{ secrets.ORACLE_HOST }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          scp nginx/nginx-selfsigned.conf ${USER}@${HOST}:~/portfolio-backend-dev/nginx/
+          scp nginx/nginx.conf ${USER}@${HOST}:~/portfolio-backend-dev/nginx/nginx.conf
 
       - name: Verify Let's Encrypt certificate exists
         env:

@@ -12,9 +12,9 @@ services:
       - "80"          # HTTP는 내부에서만 사용 (health check용)
     volumes:
       # Nginx 설정 파일
-      - ./nginx/nginx-selfsigned.conf:/etc/nginx/conf.d/default.conf
-      
-      # Self-Signed SSL 인증서
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+
+      # Let's Encrypt SSL 인증서
       - ./nginx/ssl:/etc/nginx/ssl
       
       # Nginx 로그
