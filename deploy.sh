@@ -7,18 +7,15 @@ GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-hsm9411/portfolio-backend}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG}"
 
-# Pull image
+# Pull latest image
 echo "📦 Pulling Docker image (${IMAGE_TAG})..."
 docker pull ${IMAGE_NAME}
 
-# app 컨테이너만 재시작 (nginx, redis는 건드리지 않음)
-echo "🔄 Restarting app container only..."
-docker compose stop app || true
-docker compose rm -f app || true
-
+# app + redis 재시작 (nginx는 별도 compose 파일로 관리)
+echo "🔄 Restarting containers..."
 export GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
 export IMAGE_TAG=${IMAGE_TAG}
-docker compose up -d --no-deps app
+docker compose up -d --force-recreate app
 
 # 오래된 이미지 정리
 echo "🧹 Cleaning up old images..."
