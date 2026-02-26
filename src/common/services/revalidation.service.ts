@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
 @Injectable()
 export class RevalidationService {
   private readonly logger = new Logger(RevalidationService.name);
@@ -11,11 +14,14 @@ export class RevalidationService {
     await this.trigger({ type: 'project', id });
   }
 
-  async revalidatePost(slug?: string): Promise<void> {
-    await this.trigger({ type: 'post', slug });
+  async revalidatePost(id?: string): Promise<void> {
+    await this.trigger({ type: 'post', id });
   }
 
-  private async trigger(payload: { type: string; id?: string; slug?: string }): Promise<void> {
+  private async trigger(
+    payload: { type: string; id?: string; slug?: string },
+    attempt = 1,
+  ): Promise<void> {
     const frontendUrl = process.env.FRONTEND_URL;
     const secret = process.env.REVALIDATE_SECRET;
 
@@ -36,10 +42,26 @@ export class RevalidationService {
           timeout: 5000,
         },
       );
-      this.logger.log(`Revalidated: ${payload.type}/${payload.id ?? payload.slug ?? 'list'}`);
+      this.logger.log(
+        `Revalidated: ${payload.type}/${payload.id ?? payload.slug ?? 'list'}` +
+        (attempt > 1 ? ` (attempt ${attempt})` : ''),
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`Revalidation failed [${payload.type}]: ${msg}`);
+
+      if (attempt < MAX_RETRIES) {
+        // Exponential backoff: 1s → 2s → 4s
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+        this.logger.warn(
+          `Revalidation failed [${payload.type}] attempt ${attempt}/${MAX_RETRIES}: ${msg}. Retrying in ${delay}ms...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return this.trigger(payload, attempt + 1);
+      }
+
+      this.logger.error(
+        `Revalidation permanently failed [${payload.type}] after ${MAX_RETRIES} attempts: ${msg}`,
+      );
     }
   }
 }
