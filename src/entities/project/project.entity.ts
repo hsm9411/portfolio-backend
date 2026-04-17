@@ -47,6 +47,9 @@ export class Project {
   @Column({ name: 'like_count', default: 0 })
   likeCount: number;
 
+  @Column({ name: 'comment_count', default: 0 })
+  commentCount: number;
+
   @Column({ name: 'start_date', type: 'date', nullable: true })
   startDate: Date;
 

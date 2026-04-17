@@ -57,12 +57,12 @@ export class ProjectsService {
 
   async findOne(id: string): Promise<Project> {
     const project = await this.projectRepository.findOne({ where: { id } });
-    if (!project) throw new NotFoundException('   .');
+    if (!project) throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
     return project;
   }
 
   async create(user: User, dto: CreateProjectDto): Promise<Project> {
-    if (!user.isAdmin) throw new ForbiddenException('   .');
+    if (!user.isAdmin) throw new ForbiddenException('관리자만 프로젝트를 생성할 수 있습니다.');
 
     const project = this.projectRepository.create({
       ...dto,
@@ -81,7 +81,7 @@ export class ProjectsService {
   async update(id: string, user: User, dto: UpdateProjectDto): Promise<Project> {
     const project = await this.findOne(id);
     if (project.authorId !== user.id && !user.isAdmin) {
-      throw new ForbiddenException('   .');
+      throw new ForbiddenException('수정 권한이 없습니다.');
     }
 
     Object.assign(project, dto);
@@ -95,7 +95,7 @@ export class ProjectsService {
   async remove(id: string, user: User): Promise<void> {
     const project = await this.findOne(id);
     if (project.authorId !== user.id && !user.isAdmin) {
-      throw new ForbiddenException('   .');
+      throw new ForbiddenException('삭제 권한이 없습니다.');
     }
 
     await this.projectRepository.remove(project);

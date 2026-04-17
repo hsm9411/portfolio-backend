@@ -66,7 +66,7 @@ export class PostsService {
     const post = await this.postRepository.findOne({
       where: { id, isPublished: true }
     });
-    if (!post) throw new NotFoundException('   .');
+    if (!post) throw new NotFoundException('포스트를 찾을 수 없습니다.');
     return post;
   }
 
@@ -95,9 +95,9 @@ export class PostsService {
 
   async update(id: string, user: User, dto: UpdatePostDto): Promise<Post> {
     const post = await this.postRepository.findOne({ where: { id } });
-    if (!post) throw new NotFoundException('   .');
+    if (!post) throw new NotFoundException('포스트를 찾을 수 없습니다.');
     if (post.authorId !== user.id && !user.isAdmin) {
-      throw new ForbiddenException('   .');
+      throw new ForbiddenException('수정 권한이 없습니다.');
     }
 
     if (dto.content && !dto.summary) {
@@ -117,9 +117,9 @@ export class PostsService {
 
   async remove(id: string, user: User): Promise<void> {
     const post = await this.postRepository.findOne({ where: { id } });
-    if (!post) throw new NotFoundException('   .');
+    if (!post) throw new NotFoundException('포스트를 찾을 수 없습니다.');
     if (post.authorId !== user.id && !user.isAdmin) {
-      throw new ForbiddenException('   .');
+      throw new ForbiddenException('삭제 권한이 없습니다.');
     }
 
     await this.postRepository.remove(post);

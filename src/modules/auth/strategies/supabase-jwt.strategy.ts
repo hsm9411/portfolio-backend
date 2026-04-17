@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -20,6 +20,7 @@ import * as jwksRsa from 'jwks-rsa';
  */
 @Injectable()
 export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jwt') {
+  private readonly logger = new Logger(SupabaseJwtStrategy.name);
   private readonly adminEmails: string[];
 
   constructor(
@@ -56,7 +57,7 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
       .map(email => email.trim())
       .filter(email => email.length > 0);
 
-    console.log('✅ 관리자 이메일 목록:', this.adminEmails);
+    this.logger.log(`관리자 이메일 목록: ${this.adminEmails.join(', ') || '없음'}`);
   }
 
   /**
@@ -82,9 +83,8 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
       where: { supabaseUserId },
     });
 
-    // 첫 로그인 시 사용자 생성
     if (!user) {
-      console.log(`✅ 신규 사용자 생성: ${email} (관리자: ${isAdmin})`);
+      this.logger.log(`신규 사용자 생성: ${email} (관리자: ${isAdmin})`);
       user = this.userRepository.create({
         supabaseUserId,
         email,
@@ -97,15 +97,14 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
 
       await this.userRepository.save(user);
     } else {
-      // 기존 사용자의 isAdmin 상태 업데이트 (환경 변수 변경 시)
       if (user.isAdmin !== isAdmin) {
-        console.log(`🔄 관리자 권한 업데이트: ${email} (${user.isAdmin} → ${isAdmin})`);
+        this.logger.log(`관리자 권한 업데이트: ${email} (${user.isAdmin} → ${isAdmin})`);
         user.isAdmin = isAdmin;
         await this.userRepository.save(user);
       }
     }
 
-    console.log(`🔍 사용자 검증 완료: ${email} (관리자: ${user.isAdmin})`);
+    this.logger.debug(`사용자 검증 완료: ${email} (관리자: ${user.isAdmin})`);
     return user;
   }
 }

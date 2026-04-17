@@ -41,6 +41,9 @@ export class Comment {
   @Column({ name: 'author_nickname', type: 'text' })
   authorNickname: string;
 
+  @Column({ name: 'author_avatar_url', type: 'text', nullable: true })
+  authorAvatarUrl: string | null;
+
   @Column({ name: 'author_email', type: 'text', nullable: true })
   authorEmail: string | null;
 
