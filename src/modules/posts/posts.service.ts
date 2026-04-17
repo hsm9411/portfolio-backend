@@ -35,7 +35,7 @@ export class PostsService {
 
   async findAll(dto: GetPostsDto): Promise<PaginatedPostsResponseDto> {
     const query = this.postRepository.createQueryBuilder('post');
-    query.andWhere('post.isPublished = :published', { published: true });
+    query.where('post.isPublished = :published', { published: true });
 
     if (dto.search) {
       query.andWhere(
@@ -70,25 +70,51 @@ export class PostsService {
     return post;
   }
 
+  async findMyPosts(userId: string): Promise<Post[]> {
+    return this.postRepository.find({
+      where: { authorId: userId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async create(user: User, dto: CreatePostDto): Promise<Post> {
+
     const summary = dto.summary || this.generateSummary(dto.content);
     const readingTime = this.calculateReadingTime(dto.content);
+    const isPublished = dto.isPublished !== false;
 
     const post = this.postRepository.create({
       ...dto,
       summary,
       readingTime,
-      isPublished: true,
+      isPublished,
       authorId: user.id,
       authorNickname: user.nickname,
       authorAvatarUrl: user.avatarUrl,
       tags: dto.tags || [],
-      publishedAt: new Date(),
+      publishedAt: isPublished ? new Date() : null,
     });
     const saved = await this.postRepository.save(post);
 
-    // fire-and-forget
-    this.revalidationService.revalidatePost(saved.id).catch(() => {});
+    if (isPublished) {
+      this.revalidationService.revalidatePost(saved.id).catch(() => {});
+    }
+
+    return saved;
+  }
+
+  async publish(id: string, user: User, publish: boolean): Promise<Post> {
+    const post = await this.postRepository.findOne({ where: { id } });
+    if (!post) throw new NotFoundException('포스트를 찾을 수 없습니다.');
+    if (post.authorId !== user.id && !user.isAdmin) {
+      throw new ForbiddenException('권한이 없습니다.');
+    }
+
+    post.isPublished = publish;
+    post.publishedAt = publish ? new Date() : null;
+    const saved = await this.postRepository.save(post);
+
+    this.revalidationService.revalidatePost(id).catch(() => {});
 
     return saved;
   }

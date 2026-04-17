@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional, MinLength, IsEnum, IsUrl } from 'class-validator';
+import { IsString, IsArray, IsOptional, MinLength, IsEnum, IsUrl, IsBoolean } from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty({ example: 'NestJS 마이크로서비스 아키텍처' })
@@ -34,4 +34,9 @@ export class CreatePostDto {
   @IsOptional()
   @IsUrl()
   thumbnailUrl?: string;
+
+  @ApiPropertyOptional({ example: false, default: true, description: 'false면 임시저장(Draft)' })
+  @IsOptional()
+  @IsBoolean()
+  isPublished?: boolean;
 }

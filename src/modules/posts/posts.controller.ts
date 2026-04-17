@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -40,6 +41,14 @@ export class PostsController {
   @ApiOperation({ summary: '글 목록 조회 (페이징, 검색, 태그)' })
   async findAll(@Query() dto: GetPostsDto): Promise<PaginatedPostsResponseDto> {
     return this.postsService.findAll(dto);
+  }
+
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '내 글 목록 (draft 포함)' })
+  async findMyPosts(@CurrentUser() user: User): Promise<PostResponseDto[]> {
+    return this.postsService.findMyPosts(user.id);
   }
 
   @Get(':id')
@@ -81,6 +90,18 @@ export class PostsController {
     @Body() dto: UpdatePostDto,
   ): Promise<PostResponseDto> {
     return this.postsService.update(id, user, dto);
+  }
+
+  @Patch(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '글 발행/취소 토글 (작성자만)' })
+  async publish(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body('isPublished') isPublished: boolean,
+  ): Promise<PostResponseDto> {
+    return this.postsService.publish(id, user, isPublished);
   }
 
   @Delete(':id')
