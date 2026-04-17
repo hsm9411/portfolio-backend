@@ -4,13 +4,17 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Comment, TargetType } from '../../entities/comment';
 import { User } from '../../entities/user';
+import { Post } from '../../entities/post';
+import { Project } from '../../entities/project';
 import {
   CreateCommentDto,
   UpdateCommentDto,
   CommentResponseDto,
+  GetCommentsDto,
+  PaginatedCommentsResponseDto,
 } from './dto';
 
 @Injectable()
@@ -20,6 +24,10 @@ export class CommentsService {
     private readonly commentRepository: Repository<Comment>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
+    @InjectRepository(Project)
+    private readonly projectRepository: Repository<Project>,
   ) {}
 
   /**
@@ -28,29 +36,40 @@ export class CommentsService {
   async findByTarget(
     targetType: TargetType,
     targetId: string,
+    dto: GetCommentsDto,
     currentUserId?: string,
-  ): Promise<CommentResponseDto[]> {
-    const comments = await this.commentRepository.find({
+  ): Promise<PaginatedCommentsResponseDto> {
+    const [comments, total] = await this.commentRepository.findAndCount({
       where: { targetType, targetId, isDeleted: false },
       order: { createdAt: 'ASC' },
+      skip: dto.skip,
+      take: dto.limit,
     });
 
-    return comments.map((comment) => ({
+    const items = comments.map((comment) => ({
       id: comment.id,
       content: comment.content,
       targetType: comment.targetType,
       targetId: comment.targetId,
-      isAnonymous: false, // 현재 스키마에는 익명 필드 없음
+      isAnonymous: false,
       isMine: currentUserId === comment.authorId,
       user: {
         id: comment.authorId,
         nickname: comment.authorNickname,
-        avatarUrl: null, // 현재 스키마에 없음
+        avatarUrl: comment.authorAvatarUrl,
       },
       parentId: comment.parentId,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
     }));
+
+    return {
+      items,
+      total,
+      page: dto.page,
+      pageSize: dto.limit,
+      totalPages: Math.ceil(total / dto.limit),
+    };
   }
 
   /**
@@ -84,12 +103,14 @@ export class CommentsService {
       targetId,
       authorId: user.id,
       authorNickname: user.nickname,
+      authorAvatarUrl: user.avatarUrl ?? null,
       authorEmail: user.email,
       authorIp: clientIp,
       parentId: dto.parentId || null,
     });
 
     const saved = await this.commentRepository.save(comment);
+    await this.incrementCommentCount(targetType, targetId);
 
     return {
       id: saved.id,
@@ -162,8 +183,24 @@ export class CommentsService {
       throw new ForbiddenException('댓글 삭제 권한이 없습니다.');
     }
 
-    // Soft delete
     comment.isDeleted = true;
     await this.commentRepository.save(comment);
+    await this.decrementCommentCount(comment.targetType, comment.targetId);
+  }
+
+  private async incrementCommentCount(targetType: TargetType, targetId: string): Promise<void> {
+    if (targetType === TargetType.POST) {
+      await this.postRepository.increment({ id: targetId }, 'commentCount', 1);
+    } else {
+      await this.projectRepository.increment({ id: targetId }, 'commentCount', 1);
+    }
+  }
+
+  private async decrementCommentCount(targetType: TargetType, targetId: string): Promise<void> {
+    if (targetType === TargetType.POST) {
+      await this.postRepository.decrement({ id: targetId }, 'commentCount', 1);
+    } else {
+      await this.projectRepository.decrement({ id: targetId }, 'commentCount', 1);
+    }
   }
 }

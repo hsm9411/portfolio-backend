@@ -22,6 +22,8 @@ import {
   CreateCommentDto,
   UpdateCommentDto,
   CommentResponseDto,
+  GetCommentsDto,
+  PaginatedCommentsResponseDto,
 } from './dto';
 import { getClientIp } from '../../common/utils';
 
@@ -32,14 +34,15 @@ export class CommentsController {
 
   @Get(':targetType/:targetId')
   @UseGuards(OptionalJwtAuthGuard)
-  @ApiOperation({ summary: '댓글 목록 조회 (익명 마스킹 적용)' })
+  @ApiOperation({ summary: '댓글 목록 조회 (페이지네이션)' })
   @ApiParam({ name: 'targetType', enum: TargetType })
   async findByTarget(
     @Param('targetType') targetType: TargetType,
     @Param('targetId') targetId: string,
+    @Query() dto: GetCommentsDto,
     @CurrentUser() user?: User,
-  ): Promise<CommentResponseDto[]> {
-    return this.commentsService.findByTarget(targetType, targetId, user?.id);
+  ): Promise<PaginatedCommentsResponseDto> {
+    return this.commentsService.findByTarget(targetType, targetId, dto, user?.id);
   }
 
   @Post(':targetType/:targetId')

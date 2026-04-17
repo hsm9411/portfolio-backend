@@ -54,7 +54,7 @@ export class PostResponseDto {
   updatedAt: Date;
 
   @ApiPropertyOptional()
-  publishedAt?: Date;
+  publishedAt?: Date | null;
 }
 
 export class PaginatedPostsResponseDto {
