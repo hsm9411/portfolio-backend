@@ -43,7 +43,7 @@ lerna-debug.log*
 ormconfig.json
 
 # Claude local settings
-.claude/settings.local.json
+.claude/
 
 # Deployment information (contains sensitive data)
 DEPLOYMENT.md
