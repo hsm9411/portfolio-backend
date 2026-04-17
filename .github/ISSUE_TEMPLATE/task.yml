@@ -1,0 +1,63 @@
+name: Task
+description: 리팩토링, 문서화, 설정 변경 등 개발 작업을 등록할 때 사용합니다
+title: "[Task] "
+labels: ["task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        개발 작업을 등록합니다. Feature도 Bug도 아닌 작업 (리팩토링, 문서화, 인프라 설정 등)에 사용하세요.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: 작업 유형
+      options:
+        - refactor (코드 개선)
+        - docs (문서화)
+        - test (테스트 작성)
+        - chore (의존성/설정 변경)
+        - infra (인프라/CI-CD)
+        - perf (성능 개선)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 관련 모듈
+      options:
+        - auth
+        - projects
+        - blog
+        - common/shared
+        - ci-cd
+        - infra/docker
+        - 전체
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 작업 설명
+      placeholder: 예) TypeORM 엔티티에 인덱스 추가로 조회 성능 개선
+    validations:
+      required: true
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: 작업 체크리스트
+      placeholder: |
+        - [ ] projects 테이블 tags 컬럼에 GIN 인덱스 추가
+        - [ ] 마이그레이션 파일 생성
+        - [ ] 로컬 테스트 확인
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 참고 자료
+      placeholder: 관련 이슈, PR, 문서 링크 등

@@ -80,3 +80,6 @@ nginx/ssl/
 
 # Let's Encrypt 인증서
 certbot/
+
+# AI Context (local-only harness, never commit)
+.ai-context/

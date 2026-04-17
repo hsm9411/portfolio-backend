@@ -1,0 +1,116 @@
+# GitHub Labels 정의
+# 적용 방법: gh label create 또는 scripts/sync-labels.sh 사용
+
+# ─── Type ───────────────────────────────────────────────
+- name: "bug"
+  color: "d73a4a"
+  description: "예상치 못한 동작 또는 오류"
+
+- name: "feature"
+  color: "0075ca"
+  description: "새로운 기능 추가"
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "기존 기능 개선"
+
+- name: "refactor"
+  color: "e4e669"
+  description: "기능 변경 없는 코드 개선"
+
+- name: "docs"
+  color: "0075ca"
+  description: "문서 추가 또는 수정"
+
+- name: "test"
+  color: "bfd4f2"
+  description: "테스트 코드 추가 또는 수정"
+
+- name: "chore"
+  color: "fef2c0"
+  description: "의존성, 설정, 빌드 변경"
+
+- name: "task"
+  color: "d4c5f9"
+  description: "일반 개발 작업 (리팩토링/문서/설정)"
+
+# ─── Priority ────────────────────────────────────────────
+- name: "priority: critical"
+  color: "b60205"
+  description: "즉시 처리 필요 - 서비스 불가 상태"
+
+- name: "priority: high"
+  color: "e11d48"
+  description: "빠른 처리 필요 - 주요 기능 영향"
+
+- name: "priority: medium"
+  color: "f97316"
+  description: "일반 우선순위"
+
+- name: "priority: low"
+  color: "84cc16"
+  description: "여유 있을 때 처리"
+
+# ─── Status ──────────────────────────────────────────────
+- name: "needs-triage"
+  color: "ededed"
+  description: "분류 및 우선순위 미정"
+
+- name: "in progress"
+  color: "fbca04"
+  description: "현재 작업 중"
+
+- name: "blocked"
+  color: "e4e669"
+  description: "다른 작업 또는 외부 요인으로 대기 중"
+
+- name: "review needed"
+  color: "0052cc"
+  description: "코드 리뷰 요청"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "의도적으로 수정하지 않음"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "중복 이슈 또는 PR"
+
+# ─── Module ──────────────────────────────────────────────
+- name: "module: auth"
+  color: "c5def5"
+  description: "인증/인가 모듈 (JWT, OAuth)"
+
+- name: "module: projects"
+  color: "c5def5"
+  description: "프로젝트 모듈"
+
+- name: "module: blog"
+  color: "c5def5"
+  description: "블로그 모듈"
+
+- name: "module: common"
+  color: "c5def5"
+  description: "공통/공유 모듈"
+
+# ─── Infra ───────────────────────────────────────────────
+- name: "infra: ci-cd"
+  color: "1d76db"
+  description: "GitHub Actions CI/CD 파이프라인"
+
+- name: "infra: docker"
+  color: "1d76db"
+  description: "Docker / 컨테이너 관련"
+
+- name: "infra: db"
+  color: "1d76db"
+  description: "데이터베이스 / Supabase"
+
+# ─── Environment ─────────────────────────────────────────
+- name: "env: production"
+  color: "b60205"
+  description: "프로덕션 환경 관련"
+
+- name: "env: development"
+  color: "0e8a16"
+  description: "개발 환경 관련"
