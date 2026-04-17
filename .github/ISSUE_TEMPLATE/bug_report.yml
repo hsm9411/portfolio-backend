@@ -1,0 +1,92 @@
+name: Bug Report
+description: 버그를 발견했을 때 사용합니다
+title: "[Bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        버그 리포트를 작성해 주세요. 재현 가능한 정보를 최대한 상세히 기입해 주세요.
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 관련 모듈
+      description: 버그가 발생한 모듈을 선택하세요
+      options:
+        - auth
+        - projects
+        - blog
+        - common/shared
+        - ci-cd
+        - infra/docker
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 버그 설명
+      description: 어떤 버그인지 명확하게 설명해 주세요
+      placeholder: 예) POST /auth/login 요청 시 401이 아닌 500 에러가 반환됨
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      description: 버그를 재현하는 단계를 작성해 주세요
+      placeholder: |
+        1. POST /auth/login 엔드포인트 호출
+        2. body: { email: "test@test.com", password: "..." }
+        3. 500 Internal Server Error 발생
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 예상 동작
+      placeholder: 올바른 credentials로 로그인 시 200 OK와 accessToken 반환
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작
+      placeholder: 500 Internal Server Error 반환
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 환경
+      options:
+        - production (hsm9411.duckdns.org)
+        - development (hsm9411-dev.duckdns.org)
+        - local
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 에러 로그 / 스택 트레이스
+      description: 관련 로그가 있으면 붙여넣기 해주세요
+      render: shell
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 우선순위
+      options:
+        - critical (서비스 불가)
+        - high (주요 기능 장애)
+        - medium (일부 기능 장애)
+        - low (사소한 문제)
+    validations:
+      required: true
