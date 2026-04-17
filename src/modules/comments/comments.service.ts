@@ -13,6 +13,8 @@ import {
   CreateCommentDto,
   UpdateCommentDto,
   CommentResponseDto,
+  GetCommentsDto,
+  PaginatedCommentsResponseDto,
 } from './dto';
 
 @Injectable()
@@ -34,14 +36,17 @@ export class CommentsService {
   async findByTarget(
     targetType: TargetType,
     targetId: string,
+    dto: GetCommentsDto,
     currentUserId?: string,
-  ): Promise<CommentResponseDto[]> {
-    const comments = await this.commentRepository.find({
+  ): Promise<PaginatedCommentsResponseDto> {
+    const [comments, total] = await this.commentRepository.findAndCount({
       where: { targetType, targetId, isDeleted: false },
       order: { createdAt: 'ASC' },
+      skip: dto.skip,
+      take: dto.limit,
     });
 
-    return comments.map((comment) => ({
+    const items = comments.map((comment) => ({
       id: comment.id,
       content: comment.content,
       targetType: comment.targetType,
@@ -57,6 +62,14 @@ export class CommentsService {
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
     }));
+
+    return {
+      items,
+      total,
+      page: dto.page,
+      pageSize: dto.limit,
+      totalPages: Math.ceil(total / dto.limit),
+    };
   }
 
   /**
