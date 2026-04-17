@@ -62,5 +62,5 @@ export class Post {
   updatedAt: Date;
 
   @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
-  publishedAt: Date;
+  publishedAt: Date | null;
 }
