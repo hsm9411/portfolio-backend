@@ -1,11 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import { WinstonModule } from 'nest-winston';
+import { winstonConfig } from './config/logger.config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger(winstonConfig),
+  });
 
   // Security Headers
   app.use(helmet());
@@ -16,9 +20,8 @@ async function bootstrap() {
 
   // CORS 설정
   const corsOrigins = process.env.CORS_ORIGINS;
-  
+
   if (corsOrigins === '*') {
-    // 개발 환경: 모든 origin 허용
     app.enableCors({
       origin: true,
       credentials: true,
@@ -26,7 +29,6 @@ async function bootstrap() {
       allowedHeaders: ['Content-Type', 'Authorization'],
     });
   } else {
-    // 프로덕션: 특정 도메인만 허용
     const allowedOrigins = corsOrigins?.split(',') || [
       'http://localhost:5173',
       'http://localhost:3000',
@@ -75,8 +77,9 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  console.log(`🚀 Portfolio Backend running on http://localhost:${port}`);
-  console.log(`📚 Swagger API Docs: http://localhost:${port}/api`);
+  const logger = new Logger('Bootstrap');
+  logger.log(`Portfolio Backend running on http://localhost:${port}`);
+  logger.log(`Swagger API Docs: http://localhost:${port}/api`);
 }
 
 bootstrap();
