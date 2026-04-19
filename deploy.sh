@@ -15,7 +15,10 @@ docker pull ${IMAGE_NAME}
 echo "🔄 Restarting containers..."
 export GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
 export IMAGE_TAG=${IMAGE_TAG}
-docker compose up -d --force-recreate app
+# 컨테이너 이름 충돌 방지: 기존 컨테이너 강제 제거 후 재시작
+docker compose stop app 2>/dev/null || true
+docker compose rm -f app 2>/dev/null || true
+docker compose up -d app
 
 # 오래된 이미지 정리
 echo "🧹 Cleaning up old images..."
