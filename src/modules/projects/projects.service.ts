@@ -103,8 +103,4 @@ export class ProjectsService {
     //  :  revalidate (id  )
     this.revalidationService.revalidateProject().catch(() => {});
   }
-
-  async incrementViewCount(id: string): Promise<void> {
-    await this.projectRepository.increment({ id }, 'viewCount', 1);
-  }
 }

@@ -230,25 +230,32 @@ sudo certbot certificates
 
 Swagger UI: https://hsm9411.duckdns.org/api
 
-| Method | Endpoint | 인증 |
-|--------|----------|------|
-| GET | /projects | - |
-| GET | /projects/:id | - |
-| POST | /projects | 관리자 |
-| PATCH | /projects/:id | 관리자 |
-| DELETE | /projects/:id | 관리자 |
-| GET | /posts | - |
-| GET | /posts/:id | - |
-| POST | /posts | 로그인 |
-| PATCH | /posts/:id | 작성자 |
-| DELETE | /posts/:id | 작성자 |
-| GET | /comments | - |
-| POST | /comments | 로그인 |
-| DELETE | /comments/:id | 작성자 |
-| POST | /likes/toggle | 로그인 |
-| GET | /likes/check | 로그인 |
-| GET | /auth/me | 로그인 |
-| GET | /health | - |
+| Method | Endpoint | 인증 | 설명 |
+|--------|----------|------|------|
+| GET | /projects | - | 목록 (페이지네이션, 필터, 정렬) |
+| GET | /projects/:id | - | 상세 + 조회수 증가 |
+| POST | /projects | 관리자 | 생성 |
+| PATCH | /projects/:id | 작성자/관리자 | 수정 |
+| DELETE | /projects/:id | 작성자/관리자 | 삭제 |
+| GET | /posts | - | 목록 (published만) |
+| GET | /posts/my | 로그인 | 내 글 (draft 포함) |
+| GET | /posts/:id | - | 상세 + 조회수 증가 |
+| POST | /posts | 로그인 | 생성 (isPublished 옵션) |
+| PUT | /posts/:id | 작성자/관리자 | 수정 |
+| PATCH | /posts/:id/publish | 작성자/관리자 | 발행/취소 토글 |
+| DELETE | /posts/:id | 작성자/관리자 | 삭제 |
+| GET | /comments/:type/:id | - | 댓글 목록 (페이지네이션) |
+| POST | /comments/:type/:id | 로그인 | 댓글 작성 |
+| PUT | /comments/:id | 작성자 | 댓글 수정 |
+| DELETE | /comments/:id | 작성자/관리자 | 댓글 삭제 |
+| GET | /likes/:type/:id | - | 좋아요 상태 |
+| POST | /likes/:type/:id | 로그인 | 좋아요 토글 |
+| POST | /auth/register | - | 로컬 회원가입 |
+| POST | /auth/login | - | 로컬 로그인 |
+| GET | /auth/me | 로그인 | 현재 유저 |
+| GET | /health | - | 헬스체크 |
+| GET | /metrics | - | Prometheus 메트릭 |
+| GET | /api | - | Swagger UI |
 
 ---
 
@@ -300,4 +307,4 @@ SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'portfolio';
 
 **hsm9411** | haeha2e@gmail.com | [@hsm9411](https://github.com/hsm9411)
 
-Last Updated: 2026-02-26
+Last Updated: 2026-04-19

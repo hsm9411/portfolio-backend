@@ -155,7 +155,7 @@ export class ViewCountService {
     // Redis 카운트 초기화
     await this.cacheManager.del(countKey);
 
-    console.log(`Synced ${redisCount} views for ${type}:${targetId} to DB`);
+    this.logger.debug(`Synced ${redisCount} views for ${type}:${targetId} to DB`);
   }
 
   /**
