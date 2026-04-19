@@ -23,6 +23,7 @@ import {
   GetPostsDto,
   PostResponseDto,
   PaginatedPostsResponseDto,
+  PublishPostDto,
 } from './dto';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ViewCountService, ViewTargetType } from '../../common/services';
@@ -99,9 +100,9 @@ export class PostsController {
   async publish(
     @Param('id') id: string,
     @CurrentUser() user: User,
-    @Body('isPublished') isPublished: boolean,
+    @Body() dto: PublishPostDto,
   ): Promise<PostResponseDto> {
-    return this.postsService.publish(id, user, isPublished);
+    return this.postsService.publish(id, user, dto.isPublished);
   }
 
   @Delete(':id')
