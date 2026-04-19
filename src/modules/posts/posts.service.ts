@@ -2,7 +2,10 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from '../../entities/post';
@@ -15,12 +18,16 @@ import {
   PaginatedPostsResponseDto,
 } from './dto';
 
+const CACHE_PREFIX = 'posts:list:';
+const CACHE_TTL = 60 * 1000; // 60s
+
 @Injectable()
 export class PostsService {
   constructor(
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
     private readonly revalidationService: RevalidationService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   private generateSummary(content: string): string {
@@ -33,7 +40,19 @@ export class PostsService {
     return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
   }
 
+  private async invalidateListCache(): Promise<void> {
+    try {
+      const client = (this.cacheManager.stores[0] as any).store?.client;
+      const keys: string[] = await client.keys(`${CACHE_PREFIX}*`);
+      if (keys.length > 0) await client.del(keys);
+    } catch { /* non-critical */ }
+  }
+
   async findAll(dto: GetPostsDto): Promise<PaginatedPostsResponseDto> {
+    const cacheKey = `${CACHE_PREFIX}${JSON.stringify(dto)}`;
+    const cached = await this.cacheManager.get<PaginatedPostsResponseDto>(cacheKey);
+    if (cached) return cached;
+
     const query = this.postRepository.createQueryBuilder('post');
     query.where('post.isPublished = :published', { published: true });
 
@@ -53,13 +72,16 @@ export class PostsService {
 
     const [items, total] = await query.getManyAndCount();
 
-    return {
+    const result: PaginatedPostsResponseDto = {
       items,
       total,
       page: dto.page,
       pageSize: dto.limit,
       totalPages: Math.ceil(total / dto.limit),
     };
+
+    await this.cacheManager.set(cacheKey, result, CACHE_TTL);
+    return result;
   }
 
   async findAllTags(): Promise<{ tag: string; count: number }[]> {
@@ -96,7 +118,6 @@ export class PostsService {
   }
 
   async create(user: User, dto: CreatePostDto): Promise<Post> {
-
     const summary = dto.summary || this.generateSummary(dto.content);
     const readingTime = this.calculateReadingTime(dto.content);
     const isPublished = dto.isPublished !== false;
@@ -114,6 +135,7 @@ export class PostsService {
     });
     const saved = await this.postRepository.save(post);
 
+    this.invalidateListCache().catch(() => {});
     if (isPublished) {
       this.revalidationService.revalidatePost(saved.id).catch(() => {});
     }
@@ -132,6 +154,7 @@ export class PostsService {
     post.publishedAt = publish ? new Date() : null;
     const saved = await this.postRepository.save(post);
 
+    this.invalidateListCache().catch(() => {});
     this.revalidationService.revalidatePost(id).catch(() => {});
 
     return saved;
@@ -154,6 +177,7 @@ export class PostsService {
     Object.assign(post, dto);
     const saved = await this.postRepository.save(post);
 
+    this.invalidateListCache().catch(() => {});
     this.revalidationService.revalidatePost(id).catch(() => {});
 
     return saved;
@@ -167,6 +191,8 @@ export class PostsService {
     }
 
     await this.postRepository.remove(post);
+
+    this.invalidateListCache().catch(() => {});
     this.revalidationService.revalidatePost().catch(() => {});
   }
 }

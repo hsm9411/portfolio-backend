@@ -2,7 +2,10 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../../entities/project/project.entity';
@@ -15,15 +18,31 @@ import {
   PaginatedProjectsResponseDto,
 } from './dto';
 
+const CACHE_PREFIX = 'projects:list:';
+const CACHE_TTL = 60 * 1000; // 60s
+
 @Injectable()
 export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
     private readonly revalidationService: RevalidationService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
+  private async invalidateListCache(): Promise<void> {
+    try {
+      const client = (this.cacheManager.stores[0] as any).store?.client;
+      const keys: string[] = await client.keys(`${CACHE_PREFIX}*`);
+      if (keys.length > 0) await client.del(keys);
+    } catch { /* non-critical */ }
+  }
+
   async findAll(dto: GetProjectsDto): Promise<PaginatedProjectsResponseDto> {
+    const cacheKey = `${CACHE_PREFIX}${JSON.stringify(dto)}`;
+    const cached = await this.cacheManager.get<PaginatedProjectsResponseDto>(cacheKey);
+    if (cached) return cached;
+
     const query = this.projectRepository.createQueryBuilder('project');
 
     if (dto.status) {
@@ -37,22 +56,25 @@ export class ProjectsService {
       );
     }
 
-    const sortColumn = dto.sortBy === 'created_at' ? 'project.created_at' :
-                       dto.sortBy === 'view_count' ? 'project.view_count' :
-                       'project.like_count';
+    const sortColumn = dto.sortBy === 'created_at' ? 'project.createdAt' :
+                       dto.sortBy === 'view_count' ? 'project.viewCount' :
+                       'project.likeCount';
 
     query.orderBy(sortColumn, dto.order);
     query.skip(dto.skip).take(dto.take);
 
     const [items, total] = await query.getManyAndCount();
 
-    return {
+    const result: PaginatedProjectsResponseDto = {
       items,
       total,
       page: dto.page,
       pageSize: dto.limit,
       totalPages: Math.ceil(total / dto.limit),
     };
+
+    await this.cacheManager.set(cacheKey, result, CACHE_TTL);
+    return result;
   }
 
   async findFeatured(): Promise<Project[]> {
@@ -79,7 +101,7 @@ export class ProjectsService {
     });
     const saved = await this.projectRepository.save(project);
 
-    // fire-and-forget:    
+    this.invalidateListCache().catch(() => {});
     this.revalidationService.revalidateProject(saved.id).catch(() => {});
 
     return saved;
@@ -94,6 +116,7 @@ export class ProjectsService {
     Object.assign(project, dto);
     const saved = await this.projectRepository.save(project);
 
+    this.invalidateListCache().catch(() => {});
     this.revalidationService.revalidateProject(id).catch(() => {});
 
     return saved;
@@ -107,7 +130,7 @@ export class ProjectsService {
 
     await this.projectRepository.remove(project);
 
-    //  :  revalidate (id  )
+    this.invalidateListCache().catch(() => {});
     this.revalidationService.revalidateProject().catch(() => {});
   }
 }
