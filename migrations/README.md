@@ -14,6 +14,7 @@
 | 2026-02-09-add-supabase-oauth.sql | 2026-02-09 | users 테이블에 supabase_user_id 컬럼 추가 | ✅ 통합됨 |
 | 2026-02-20-create-thumbnails-storage.sql | 2026-02-20 | Supabase Storage thumbnails 버킷 생성 | ❌ 별도 실행 필요 (Storage 설정) |
 | 2026-04-17-add-comment-avatar-and-project-comment-count.sql | 2026-04-17 | comments.author_avatar_url 컬럼 추가, projects.comment_count 컬럼 추가 | ✅ 통합됨 |
+| 2026-04-19-add-comment-is-anonymous.sql | 2026-04-19 | comments.is_anonymous 컬럼 추가 | ✅ 통합됨 |
 
 ## 주의
 

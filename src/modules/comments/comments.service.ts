@@ -51,13 +51,11 @@ export class CommentsService {
       content: comment.content,
       targetType: comment.targetType,
       targetId: comment.targetId,
-      isAnonymous: false,
+      isAnonymous: comment.isAnonymous,
       isMine: currentUserId === comment.authorId,
-      user: {
-        id: comment.authorId,
-        nickname: comment.authorNickname,
-        avatarUrl: comment.authorAvatarUrl,
-      },
+      user: comment.isAnonymous
+        ? { id: null, nickname: '익명', avatarUrl: null }
+        : { id: comment.authorId, nickname: comment.authorNickname, avatarUrl: comment.authorAvatarUrl },
       parentId: comment.parentId,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
@@ -97,10 +95,13 @@ export class CommentsService {
       }
     }
 
+    const isAnonymous = dto.isAnonymous ?? false;
+
     const comment = this.commentRepository.create({
       content: dto.content,
       targetType,
       targetId,
+      isAnonymous,
       authorId: user.id,
       authorNickname: user.nickname,
       authorAvatarUrl: user.avatarUrl ?? null,
@@ -117,13 +118,11 @@ export class CommentsService {
       content: saved.content,
       targetType: saved.targetType,
       targetId: saved.targetId,
-      isAnonymous: false,
+      isAnonymous,
       isMine: true,
-      user: {
-        id: user.id,
-        nickname: user.nickname,
-        avatarUrl: user.avatarUrl,
-      },
+      user: isAnonymous
+        ? { id: null, nickname: '익명', avatarUrl: null }
+        : { id: user.id, nickname: user.nickname, avatarUrl: user.avatarUrl },
       parentId: saved.parentId,
       createdAt: saved.createdAt,
       updatedAt: saved.updatedAt,
@@ -156,13 +155,11 @@ export class CommentsService {
       content: updated.content,
       targetType: updated.targetType,
       targetId: updated.targetId,
-      isAnonymous: false,
+      isAnonymous: updated.isAnonymous,
       isMine: true,
-      user: {
-        id: user.id,
-        nickname: user.nickname,
-        avatarUrl: user.avatarUrl,
-      },
+      user: updated.isAnonymous
+        ? { id: null, nickname: '익명', avatarUrl: null }
+        : { id: user.id, nickname: user.nickname, avatarUrl: user.avatarUrl },
       parentId: updated.parentId,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,

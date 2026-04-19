@@ -50,6 +50,10 @@ export class Comment {
   @Column({ name: 'author_ip', type: 'text', nullable: true })
   authorIp: string | null;
 
+  // 익명 댓글 여부 (authorId는 저장하되 응답에서 숨김)
+  @Column({ name: 'is_anonymous', type: 'boolean', default: false })
+  isAnonymous: boolean;
+
   // 삭제 여부
   @Column({ name: 'is_deleted', type: 'boolean', default: false })
   isDeleted: boolean;

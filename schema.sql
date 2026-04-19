@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS portfolio.comments (
   author_avatar_url text,
   author_email     text,
   author_ip        text,                                       -- 익명 사용자 식별용
+  is_anonymous     boolean     NOT NULL DEFAULT false,          -- 로그인 기반 익명 (authorId 저장, 응답에서 숨김)
   is_deleted       boolean     NOT NULL DEFAULT false,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now()
