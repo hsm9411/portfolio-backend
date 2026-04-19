@@ -55,6 +55,13 @@ export class ProjectsService {
     };
   }
 
+  async findFeatured(): Promise<Project[]> {
+    return this.projectRepository.find({
+      where: { featured: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async findOne(id: string): Promise<Project> {
     const project = await this.projectRepository.findOne({ where: { id } });
     if (!project) throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
