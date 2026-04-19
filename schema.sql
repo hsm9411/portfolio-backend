@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS portfolio.projects (
   featured         boolean     NOT NULL DEFAULT false,
   view_count       integer     NOT NULL DEFAULT 0,
   like_count       integer     NOT NULL DEFAULT 0,
+  comment_count    integer     NOT NULL DEFAULT 0,
   start_date       date,
   end_date         date,
   author_id        uuid        NOT NULL,                       -- portfolio.users.id (denormalized)
@@ -132,6 +133,7 @@ CREATE TABLE IF NOT EXISTS portfolio.comments (
   content          text        NOT NULL,
   author_id        uuid,                                       -- null: 익명 댓글
   author_nickname  text        NOT NULL,
+  author_avatar_url text,
   author_email     text,
   author_ip        text,                                       -- 익명 사용자 식별용
   is_deleted       boolean     NOT NULL DEFAULT false,
