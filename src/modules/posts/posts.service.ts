@@ -62,11 +62,16 @@ export class PostsService {
     };
   }
 
-  async findOne(id: string): Promise<Post> {
-    const post = await this.postRepository.findOne({
-      where: { id, isPublished: true }
-    });
+  async findOne(id: string, requester?: User): Promise<Post> {
+    const post = await this.postRepository.findOne({ where: { id } });
     if (!post) throw new NotFoundException('포스트를 찾을 수 없습니다.');
+
+    const canViewDraft =
+      requester && (requester.id === post.authorId || requester.isAdmin);
+    if (!post.isPublished && !canViewDraft) {
+      throw new NotFoundException('포스트를 찾을 수 없습니다.');
+    }
+
     return post;
   }
 
