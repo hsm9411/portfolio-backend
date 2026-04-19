@@ -45,6 +45,13 @@ export class PostsController {
     return this.postsService.findAll(dto);
   }
 
+  @Get('tags')
+  @SkipThrottle()
+  @ApiOperation({ summary: '사용 중인 태그 목록 + 카운트' })
+  async findAllTags(): Promise<{ tag: string; count: number }[]> {
+    return this.postsService.findAllTags();
+  }
+
   @Get('my')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

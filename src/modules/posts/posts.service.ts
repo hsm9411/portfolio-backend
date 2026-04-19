@@ -62,6 +62,19 @@ export class PostsService {
     };
   }
 
+  async findAllTags(): Promise<{ tag: string; count: number }[]> {
+    const rows = await this.postRepository
+      .createQueryBuilder('post')
+      .select('unnest(post.tags)', 'tag')
+      .addSelect('COUNT(*)', 'count')
+      .where('post.isPublished = :published', { published: true })
+      .groupBy('tag')
+      .orderBy('count', 'DESC')
+      .getRawMany<{ tag: string; count: string }>();
+
+    return rows.map((r) => ({ tag: r.tag, count: Number(r.count) }));
+  }
+
   async findOne(id: string, requester?: User): Promise<Post> {
     const post = await this.postRepository.findOne({ where: { id } });
     if (!post) throw new NotFoundException('포스트를 찾을 수 없습니다.');
