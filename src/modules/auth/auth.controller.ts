@@ -5,6 +5,8 @@ import {
   Body,
   UseGuards,
   Req,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { Request } from 'express';
@@ -77,6 +79,18 @@ export class AuthController {
   @ApiResponse({ status: 401, description: '인증 필요' })
   async getProfile(@Req() req: Request & { user: User }) {
     return req.user;
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: '로그아웃 (토큰 무효화)' })
+  @ApiResponse({ status: 204, description: '로그아웃 성공' })
+  async logout(@Req() req: Request & { user: User; headers: Record<string, string> }) {
+    const authHeader = (req as any).headers?.authorization as string | undefined;
+    const token = authHeader?.replace('Bearer ', '');
+    if (token) await this.authService.logout(token);
   }
 
   /**
