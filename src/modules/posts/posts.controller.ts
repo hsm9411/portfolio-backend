@@ -15,6 +15,7 @@ import type { Request } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../../entities/user';
 import {
@@ -44,6 +45,13 @@ export class PostsController {
     return this.postsService.findAll(dto);
   }
 
+  @Get('tags')
+  @SkipThrottle()
+  @ApiOperation({ summary: '사용 중인 태그 목록 + 카운트' })
+  async findAllTags(): Promise<{ tag: string; count: number }[]> {
+    return this.postsService.findAllTags();
+  }
+
   @Get('my')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -54,12 +62,14 @@ export class PostsController {
 
   @Get(':id')
   @SkipThrottle()
-  @ApiOperation({ summary: 'ID로 글 조회 (Redis 조회수 캐싱)' })
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'ID로 글 조회 (Redis 조회수 캐싱, draft는 작성자/관리자만)' })
   async findOne(
     @Param('id') id: string,
     @Req() req: Request,
+    @CurrentUser() user?: User,
   ): Promise<PostResponseDto> {
-    const post = await this.postsService.findOne(id);
+    const post = await this.postsService.findOne(id, user);
     
     // Redis 기반 조회수 증가 (IP 중복 방지, 24시간 TTL)
     const clientIp = getClientIp(req);
