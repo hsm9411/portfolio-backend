@@ -9,6 +9,8 @@ import { getRedisConfig } from './config/redis.config';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { TerminusModule } from '@nestjs/terminus';
 import { ScheduleModule } from '@nestjs/schedule';
+import { WinstonModule } from 'nest-winston';
+import { winstonConfig } from './config/logger.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health.controller';
@@ -59,6 +61,9 @@ import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-prox
 
     // Cron Jobs
     ScheduleModule.forRoot(),
+
+    // Logger (Winston)
+    WinstonModule.forRoot(winstonConfig),
 
     // Health Check
     TerminusModule,

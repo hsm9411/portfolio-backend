@@ -37,9 +37,9 @@ export class ProjectsService {
       );
     }
 
-    const sortColumn = dto.sortBy === 'created_at' ? 'project.created_at' :
-                       dto.sortBy === 'view_count' ? 'project.view_count' :
-                       'project.like_count';
+    const sortColumn = dto.sortBy === 'created_at' ? 'project.createdAt' :
+                       dto.sortBy === 'view_count' ? 'project.viewCount' :
+                       'project.likeCount';
 
     query.orderBy(sortColumn, dto.order);
     query.skip(dto.skip).take(dto.take);
