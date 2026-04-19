@@ -151,8 +151,4 @@ export class PostsService {
     await this.postRepository.remove(post);
     this.revalidationService.revalidatePost().catch(() => {});
   }
-
-  async incrementViewCount(id: string): Promise<void> {
-    await this.postRepository.increment({ id }, 'viewCount', 1);
-  }
 }
