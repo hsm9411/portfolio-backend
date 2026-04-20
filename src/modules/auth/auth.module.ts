@@ -29,7 +29,7 @@ import { JwtAuthGuard, OptionalJwtAuthGuard } from './guards';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'default-secret',
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '7d',
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN') || '15m',
         } as any,
       }),
     }),
