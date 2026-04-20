@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsOptional, IsInt, Min, Max, IsString, IsArray } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsString, IsArray, IsEnum } from 'class-validator';
 
 export class GetPostsDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -28,6 +28,24 @@ export class GetPostsDto {
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({
+    description: '정렬 기준',
+    enum: ['created_at', 'view_count', 'like_count'],
+    default: 'created_at',
+  })
+  @IsOptional()
+  @IsEnum(['created_at', 'view_count', 'like_count'])
+  sortBy?: string = 'created_at';
+
+  @ApiPropertyOptional({
+    description: '정렬 방향',
+    enum: ['ASC', 'DESC'],
+    default: 'DESC',
+  })
+  @IsOptional()
+  @IsEnum(['ASC', 'DESC'])
+  order?: 'ASC' | 'DESC' = 'DESC';
 
   get skip(): number {
     return (this.page - 1) * this.limit;
