@@ -22,7 +22,7 @@ docker compose up -d app
 
 # 오래된 이미지 정리
 echo "🧹 Cleaning up old images..."
-docker image prune -af
+docker image prune -f
 
 # 상태 확인
 echo "📋 Container status:"
