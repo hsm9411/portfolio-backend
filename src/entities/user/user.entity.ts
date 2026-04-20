@@ -16,7 +16,7 @@ import { ApiProperty } from '@nestjs/swagger';
  * - provider: 인증 방식 (local, google, github, email)
  * - providerId: OAuth Provider의 고유 ID
  */
-@Entity('users', { schema: 'portfolio' })
+@Entity('users')
 @Index(['email'], { unique: true })
 @Index(['supabaseUserId'], { unique: true })
 export class User {
