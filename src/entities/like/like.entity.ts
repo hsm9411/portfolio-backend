@@ -11,7 +11,7 @@ export enum LikeTargetType {
   POST = 'post',
 }
 
-@Entity('likes', { schema: 'portfolio' })
+@Entity('likes')
 @Index(['targetType', 'targetId', 'userId'], { unique: true })  // ✅ Entity 필드명 사용
 export class Like {
   @PrimaryGeneratedColumn('uuid')

@@ -67,7 +67,10 @@ export class PostsService {
       query.andWhere('post.tags && :tags', { tags: dto.tags });
     }
 
-    query.orderBy('post.createdAt', 'DESC');
+    const sortColumn = dto.sortBy === 'view_count' ? 'post.viewCount' :
+                       dto.sortBy === 'like_count' ? 'post.likeCount' :
+                       'post.createdAt';
+    query.orderBy(sortColumn, dto.order);
     query.skip(dto.skip).take(dto.take);
 
     const [items, total] = await query.getManyAndCount();
