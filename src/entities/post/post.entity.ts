@@ -7,7 +7,7 @@ import {
   Index,
 } from 'typeorm';
 
-@Entity('posts', { schema: 'portfolio' })
+@Entity('posts')
 @Index('idx_posts_tags', { synchronize: false })
 export class Post {
   @PrimaryGeneratedColumn('uuid')

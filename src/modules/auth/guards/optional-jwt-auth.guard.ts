@@ -10,7 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
  * 사용처: 댓글 조회 (로그인 시 익명 마스킹 해제)
  */
 @Injectable()
-export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
+export class OptionalJwtAuthGuard extends AuthGuard(['jwt', 'supabase-jwt']) {
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
     // 에러가 있거나 user가 없어도 통과
     return user;
