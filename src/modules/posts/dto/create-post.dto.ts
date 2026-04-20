@@ -39,4 +39,14 @@ export class CreatePostDto {
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
+
+  @ApiPropertyOptional({
+    example: ['https://example.com/img1.png', 'https://example.com/img2.png'],
+    description: '본문 이미지 URL 목록',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUrl({}, { each: true })
+  imageUrls?: string[];
 }

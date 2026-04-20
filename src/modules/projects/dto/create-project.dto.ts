@@ -94,4 +94,15 @@ export class CreateProjectDto {
   @IsOptional()
   @IsEnum(['in-progress', 'completed', 'archived'])
   status?: string;
+
+  @ApiProperty({
+    description: '본문 이미지 URL 목록',
+    example: ['https://example.com/img1.png', 'https://example.com/img2.png'],
+    type: [String],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUrl({}, { each: true })
+  imageUrls?: string[];
 }

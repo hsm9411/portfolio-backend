@@ -50,6 +50,9 @@ export class Project {
   @Column({ name: 'comment_count', default: 0 })
   commentCount: number;
 
+  @Column({ name: 'image_urls', type: 'text', array: true, default: [] })
+  imageUrls: string[];
+
   @Column({ name: 'start_date', type: 'date', nullable: true })
   startDate: Date;
 
