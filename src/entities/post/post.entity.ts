@@ -43,6 +43,9 @@ export class Post {
   @Column({ name: 'comment_count', default: 0 })
   commentCount: number;
 
+  @Column({ name: 'image_urls', type: 'text', array: true, default: [] })
+  imageUrls: string[];
+
   @Column({ name: 'reading_time', nullable: true })
   readingTime: number;
 
