@@ -19,6 +19,7 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { LikesModule } from './modules/likes/likes.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { CommonModule } from './common/common.module';
 import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-proxy.guard';
 
@@ -76,6 +77,7 @@ import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-prox
     PostsModule,
     CommentsModule,
     LikesModule,
+    UploadsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
