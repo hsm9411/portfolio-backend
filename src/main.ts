@@ -9,6 +9,7 @@ import { winstonConfig } from './config/logger.config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: WinstonModule.createLogger(winstonConfig),
+    rawBody: true, // GitHub Webhook HMAC 서명 검증용
   });
 
   // Security Headers
@@ -66,9 +67,11 @@ async function bootstrap() {
     .addBearerAuth()
     .addTag('auth', 'Authentication (OAuth + JWT)')
     .addTag('projects', 'Project Portfolio')
+    .addTag('project-updates', 'Project Changelog / Update Timeline')
     .addTag('posts', 'Blog Posts')
     .addTag('comments', 'Comments & Replies')
     .addTag('likes', 'Likes')
+    .addTag('webhooks', 'External Webhooks (GitHub)')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

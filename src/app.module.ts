@@ -16,9 +16,11 @@ import { AppService } from './app.service';
 import { HealthController } from './health.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { ProjectsModule } from './modules/projects/projects.module';
+import { ProjectUpdatesModule } from './modules/project-updates/project-updates.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { LikesModule } from './modules/likes/likes.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { CommonModule } from './common/common.module';
 import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-proxy.guard';
 
@@ -73,9 +75,11 @@ import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-prox
 
     AuthModule,
     ProjectsModule,
+    ProjectUpdatesModule,
     PostsModule,
     CommentsModule,
     LikesModule,
+    WebhooksModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
