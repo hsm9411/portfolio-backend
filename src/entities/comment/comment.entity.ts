@@ -14,7 +14,7 @@ export enum TargetType {
   POST = 'post',
 }
 
-@Entity('comments', { schema: 'portfolio' })
+@Entity('comments')
 @Index(['targetType', 'targetId'])
 @Index(['parentId'])
 export class Comment {
