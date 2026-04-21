@@ -66,6 +66,7 @@ async function bootstrap() {
     .addBearerAuth()
     .addTag('auth', 'Authentication (OAuth + JWT)')
     .addTag('projects', 'Project Portfolio')
+    .addTag('project-updates', 'Project Changelog / Update Timeline')
     .addTag('posts', 'Blog Posts')
     .addTag('comments', 'Comments & Replies')
     .addTag('likes', 'Likes')
