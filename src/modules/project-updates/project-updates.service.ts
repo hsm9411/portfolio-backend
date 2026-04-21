@@ -44,31 +44,11 @@ export class ProjectUpdatesService {
       updateType: UpdateType.MANUAL,
       title: dto.title,
       content: dto.content,
+      externalUrl: dto.externalUrl ?? null,
     });
 
     const saved = await this.projectUpdateRepository.save(update);
     this.logger.log(`ProjectUpdate created: ${saved.id} (project: ${projectId})`);
-    return saved;
-  }
-
-  async createFromWebhook(data: {
-    projectId: string;
-    title: string;
-    content: string;
-    externalUrl: string;
-  }): Promise<ProjectUpdate> {
-    const update = this.projectUpdateRepository.create({
-      projectId: data.projectId,
-      updateType: UpdateType.GITHUB_PR,
-      title: data.title,
-      content: data.content,
-      externalUrl: data.externalUrl,
-    });
-
-    const saved = await this.projectUpdateRepository.save(update);
-    this.logger.log(
-      `GitHub PR auto-logged: ${saved.id} (project: ${data.projectId})`,
-    );
     return saved;
   }
 

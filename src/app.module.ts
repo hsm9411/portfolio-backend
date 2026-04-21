@@ -20,7 +20,6 @@ import { ProjectUpdatesModule } from './modules/project-updates/project-updates.
 import { PostsModule } from './modules/posts/posts.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { LikesModule } from './modules/likes/likes.module';
-import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { CommonModule } from './common/common.module';
 import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-proxy.guard';
 
@@ -79,7 +78,6 @@ import { ThrottlerBehindProxyGuard } from './common/guards/throttler-behind-prox
     PostsModule,
     CommentsModule,
     LikesModule,
-    WebhooksModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

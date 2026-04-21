@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class CreateProjectUpdateDto {
   @ApiProperty({ description: '업데이트 제목', maxLength: 255 })
@@ -12,4 +12,10 @@ export class CreateProjectUpdateDto {
   @IsString()
   @IsNotEmpty()
   content: string;
+
+  @ApiPropertyOptional({ description: '관련 URL (GitHub PR, 배포 링크 등)', maxLength: 255 })
+  @IsOptional()
+  @IsUrl()
+  @MaxLength(255)
+  externalUrl?: string;
 }
