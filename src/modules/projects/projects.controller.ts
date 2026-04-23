@@ -80,13 +80,14 @@ export class ProjectsController {
     @Param('id') id: string,
     @Req() req: Request,
   ): Promise<ProjectResponseDto> {
-    // Redis 기반 조회수 증가 (IP 중복 방지, 24시간 TTL)
+    const project = await this.projectsService.findOne(id);
+
     const clientIp = getClientIp(req);
     this.viewCountService
-      .incrementView(ViewTargetType.PROJECT, id, clientIp)
+      .incrementView(ViewTargetType.PROJECT, project.id, clientIp)
       .catch(() => {});
 
-    return this.projectsService.findOne(id);
+    return project;
   }
 
   /**
