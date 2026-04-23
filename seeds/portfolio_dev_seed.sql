@@ -25,7 +25,7 @@ VALUES
     'https://avatars.githubusercontent.com/u/583231?v=4',
     '풀스택 개발자입니다. NestJS, Next.js, PostgreSQL을 주로 사용합니다. 클린 코드와 테스트 가능한 아키텍처에 관심이 많습니다.',
     'https://github.com/hsm9411',
-    'https://hsm9411.duckdns.org',
+    'https://hsm9411-dev.duckdns.org',
     true, 'github', now() - interval '200 days', now()
   ),
   (
