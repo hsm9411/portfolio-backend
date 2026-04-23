@@ -14,7 +14,7 @@ export const getRedisConfig = async (
   });
 
   return {
-    store: store as any,
+    stores: [store],
     ttl: configService.get<number>('REDIS_TTL') || 600,
   };
 };
