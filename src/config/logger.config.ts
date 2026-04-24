@@ -4,7 +4,7 @@ import { WinstonModuleOptions } from 'nest-winston';
 const { combine, timestamp, printf, colorize, errors } = winston.format;
 
 const logFormat = printf(({ level, message, timestamp: ts, stack }) => {
-  return `${ts} [${level}] ${stack || message}`;
+  return `${String(ts)} [${String(level)}] ${String(stack || message)}`;
 });
 
 export const winstonConfig: WinstonModuleOptions = {
@@ -16,7 +16,12 @@ export const winstonConfig: WinstonModuleOptions = {
   ),
   transports: [
     new winston.transports.Console({
-      format: combine(colorize(), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), errors({ stack: true }), logFormat),
+      format: combine(
+        colorize(),
+        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        errors({ stack: true }),
+        logFormat,
+      ),
     }),
     new winston.transports.File({
       filename: 'logs/error.log',
