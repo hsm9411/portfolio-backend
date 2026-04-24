@@ -5,6 +5,10 @@ on:
     branches:
       - main
       - develop
+  pull_request:
+    branches:
+      - main
+      - develop
   workflow_dispatch:
 
 concurrency:
@@ -17,11 +21,36 @@ env:
 
 jobs:
   # ============================================================
-  # Job 1: Docker 이미지 빌드 & GHCR Push (공통)
+  # Job 1: Lint (PR 및 배포 전 게이트)
+  # ============================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint:ci
+
+  # ============================================================
+  # Job 2: Docker 이미지 빌드 & GHCR Push (push 이벤트만)
   # ============================================================
   build-and-push:
     name: Build and Push Docker Image
+    needs: lint
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read
       packages: write
@@ -61,13 +90,13 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ============================================================
-  # Job 2: main → Production 배포
+  # Job 3: main → Production 배포
   # ============================================================
   deploy-prod:
     name: Deploy to Production
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
 
     steps:
       - name: Checkout code
@@ -140,13 +169,13 @@ jobs:
           echo "Production deployment verified!"
 
   # ============================================================
-  # Job 3: develop → Development 배포
+  # Job 4: develop → Development 배포
   # ============================================================
   deploy-dev:
     name: Deploy to Development
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' && github.event_name != 'pull_request'
 
     steps:
       - name: Checkout code
