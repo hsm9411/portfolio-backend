@@ -1,20 +1,21 @@
 import { CacheModuleOptions } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
-import { redisStore } from 'cache-manager-redis-yet';
+import KeyvRedis from '@keyv/redis';
+import Keyv from 'keyv';
 
-export const getRedisConfig = async (
+export const getRedisConfig = (
   configService: ConfigService,
-): Promise<CacheModuleOptions> => {
-  const store = await redisStore({
-    socket: {
-      host: configService.get<string>('REDIS_HOST'),
-      port: configService.get<number>('REDIS_PORT'),
-    },
-    ttl: configService.get<number>('REDIS_TTL') || 600,
-  });
+): CacheModuleOptions => {
+  const host = configService.get<string>('REDIS_HOST');
+  const port = configService.get<number>('REDIS_PORT');
+  const ttlSeconds = configService.get<number>('REDIS_TTL') || 600;
 
   return {
-    stores: [store],
-    ttl: configService.get<number>('REDIS_TTL') || 600,
+    stores: [
+      new Keyv({
+        store: new KeyvRedis(`redis://${host}:${port}`),
+        ttl: ttlSeconds * 1000,
+      }),
+    ],
   };
 };
