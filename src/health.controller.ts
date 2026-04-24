@@ -17,7 +17,7 @@ export class HealthController {
   @ApiOperation({ summary: '서버 상태 확인 (DB)' })
   check() {
     return this.health.check([
-      () => this.db.pingCheck('database'),
+      () => this.db.pingCheck('database', { timeout: 3000 }),
     ]);
   }
 }
