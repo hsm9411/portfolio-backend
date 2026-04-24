@@ -13,7 +13,7 @@ import { Injectable } from '@nestjs/common';
  */
 @Injectable()
 export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
-  protected async getTracker(req: Record<string, any>): Promise<string> {
+  protected override getTracker(req: Record<string, any>): Promise<string> {
     // Cloudflare가 제공하는 실제 IP 헤더
     const cfConnectingIp = req.headers['cf-connecting-ip'];
     if (cfConnectingIp) {
@@ -34,6 +34,6 @@ export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
     }
 
     // 기본값: Express req.ip (trust proxy 설정 필요)
-    return req.ip || req.connection.remoteAddress || 'unknown';
+    return Promise.resolve(req.ip || req.connection.remoteAddress || 'unknown');
   }
 }

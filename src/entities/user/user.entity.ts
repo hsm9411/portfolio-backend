@@ -25,7 +25,12 @@ export class User {
   id: string;
 
   @ApiProperty({ description: 'Supabase Auth User ID', required: false })
-  @Column({ name: 'supabase_user_id', type: 'uuid', unique: true, nullable: true })
+  @Column({
+    name: 'supabase_user_id',
+    type: 'uuid',
+    unique: true,
+    nullable: true,
+  })
   supabaseUserId: string;
 
   @ApiProperty({ description: '이메일', example: 'user@example.com' })

@@ -37,8 +37,8 @@ import { JwtAuthGuard, OptionalJwtAuthGuard } from './guards';
   controllers: [AuthController],
   providers: [
     AuthService,
-    JwtStrategy,          // Local 로그인용
-    SupabaseJwtStrategy,  // Supabase OAuth용
+    JwtStrategy, // Local 로그인용
+    SupabaseJwtStrategy, // Supabase OAuth용
     JwtAuthGuard,
     OptionalJwtAuthGuard,
   ],

@@ -87,7 +87,10 @@ describe('PostsService', () => {
         PostsService,
         { provide: getRepositoryToken(Post), useValue: repo },
         { provide: CACHE_MANAGER, useValue: cache },
-        { provide: RevalidationService, useValue: { revalidatePost: jest.fn().mockResolvedValue(undefined) } },
+        {
+          provide: RevalidationService,
+          useValue: { revalidatePost: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 
@@ -96,7 +99,13 @@ describe('PostsService', () => {
 
   describe('findAll', () => {
     it('returns cached result on cache hit', async () => {
-      const cached = { items: [publishedPost], total: 1, page: 1, pageSize: 10, totalPages: 1 };
+      const cached = {
+        items: [publishedPost],
+        total: 1,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      };
       cache.get.mockResolvedValue(cached);
 
       const result = await service.findAll(new GetPostsDto());
@@ -111,7 +120,9 @@ describe('PostsService', () => {
 
       const result = await service.findAll(new GetPostsDto());
 
-      expect(qb.where).toHaveBeenCalledWith('post.isPublished = :published', { published: true });
+      expect(qb.where).toHaveBeenCalledWith('post.isPublished = :published', {
+        published: true,
+      });
       expect(result.items).toEqual([publishedPost]);
       expect(cache.set).toHaveBeenCalled();
     });
@@ -136,7 +147,9 @@ describe('PostsService', () => {
 
       await service.findAll(dto);
 
-      expect(qb.andWhere).toHaveBeenCalledWith('post.tags && :tags', { tags: ['NestJS'] });
+      expect(qb.andWhere).toHaveBeenCalledWith('post.tags && :tags', {
+        tags: ['NestJS'],
+      });
     });
   });
 
@@ -148,17 +161,23 @@ describe('PostsService', () => {
 
     it('throws NotFoundException when post does not exist', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.findOne('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('hides draft from non-owner', async () => {
       repo.findOne.mockResolvedValue(draftPost);
-      await expect(service.findOne('draft-uuid', otherUser)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('draft-uuid', otherUser)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns draft to its owner', async () => {
       repo.findOne.mockResolvedValue(draftPost);
-      expect(await service.findOne('draft-uuid', authorUser)).toEqual(draftPost);
+      expect(await service.findOne('draft-uuid', authorUser)).toEqual(
+        draftPost,
+      );
     });
 
     it('returns draft to admin', async () => {
@@ -262,14 +281,18 @@ describe('PostsService', () => {
 
     it('throws ForbiddenException when not owner and not admin', async () => {
       repo.findOne.mockResolvedValue(publishedPost);
-      await expect(service.publish('post-uuid', otherUser, false)).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.publish('post-uuid', otherUser, false),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('update', () => {
     it('throws ForbiddenException when not owner and not admin', async () => {
       repo.findOne.mockResolvedValue(publishedPost);
-      await expect(service.update('post-uuid', otherUser, { title: 'X' })).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.update('post-uuid', otherUser, { title: 'X' }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('recalculates summary and readingTime when content changes', async () => {
@@ -288,7 +311,9 @@ describe('PostsService', () => {
   describe('remove', () => {
     it('throws ForbiddenException when not owner and not admin', async () => {
       repo.findOne.mockResolvedValue(publishedPost);
-      await expect(service.remove('post-uuid', otherUser)).rejects.toThrow(ForbiddenException);
+      await expect(service.remove('post-uuid', otherUser)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('removes post when user is owner', async () => {

@@ -37,7 +37,12 @@ export class ProjectUpdate {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ name: 'external_url', type: 'varchar', length: 255, nullable: true })
+  @Column({
+    name: 'external_url',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   externalUrl: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

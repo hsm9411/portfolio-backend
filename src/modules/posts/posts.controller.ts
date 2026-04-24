@@ -63,14 +63,16 @@ export class PostsController {
   @Get(':id')
   @SkipThrottle()
   @UseGuards(OptionalJwtAuthGuard)
-  @ApiOperation({ summary: 'ID로 글 조회 (Redis 조회수 캐싱, draft는 작성자/관리자만)' })
+  @ApiOperation({
+    summary: 'ID로 글 조회 (Redis 조회수 캐싱, draft는 작성자/관리자만)',
+  })
   async findOne(
     @Param('id') id: string,
     @Req() req: Request,
     @CurrentUser() user?: User,
   ): Promise<PostResponseDto> {
     const post = await this.postsService.findOne(id, user);
-    
+
     // Redis 기반 조회수 증가 (IP 중복 방지, 24시간 TTL)
     const clientIp = getClientIp(req);
     this.viewCountService

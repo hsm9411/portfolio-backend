@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsArray, IsOptional, MinLength, IsEnum, IsUrl, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  IsOptional,
+  MinLength,
+  IsEnum,
+  IsUrl,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreatePostDto {
   @ApiProperty({ example: 'NestJS 마이크로서비스 아키텍처' })
@@ -17,9 +25,9 @@ export class CreatePostDto {
   @IsString()
   summary?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: 'tutorial',
-    enum: ['tutorial', 'essay', 'review', 'news']
+    enum: ['tutorial', 'essay', 'review', 'news'],
   })
   @IsEnum(['tutorial', 'essay', 'review', 'news'])
   category: string;
@@ -35,7 +43,11 @@ export class CreatePostDto {
   @IsUrl()
   thumbnailUrl?: string;
 
-  @ApiPropertyOptional({ example: false, default: true, description: 'false면 임시저장(Draft)' })
+  @ApiPropertyOptional({
+    example: false,
+    default: true,
+    description: 'false면 임시저장(Draft)',
+  })
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;

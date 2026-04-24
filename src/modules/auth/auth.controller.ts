@@ -8,7 +8,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards';
@@ -26,7 +31,7 @@ export class AuthController {
   @ApiOperation({ summary: '현재 사용자 정보 조회' })
   @ApiResponse({ status: 200, description: '조회 성공' })
   @ApiResponse({ status: 401, description: '인증 필요' })
-  async getProfile(@Req() req: Request & { user: User }) {
+  getProfile(@Req() req: Request & { user: User }) {
     return req.user;
   }
 
@@ -34,7 +39,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'OAuth 사용자 동기화 및 토큰 발급' })
-  @ApiResponse({ status: 200, description: 'Access Token + Refresh Token 반환' })
+  @ApiResponse({
+    status: 200,
+    description: 'Access Token + Refresh Token 반환',
+  })
   async syncOAuthUser(@Req() req: Request & { user: User }) {
     const tokens = this.authService.generateTokens(req.user);
     await this.authService.saveRefreshToken(req.user.id, tokens.refreshToken);
@@ -47,7 +55,11 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Access Token 재발급 (Refresh Token rotation)' })
-  @ApiResponse({ status: 200, type: TokenResponseDto, description: '새 토큰 쌍 반환' })
+  @ApiResponse({
+    status: 200,
+    type: TokenResponseDto,
+    description: '새 토큰 쌍 반환',
+  })
   @ApiResponse({ status: 401, description: '유효하지 않은 Refresh Token' })
   async refresh(@Body() dto: RefreshTokenDto): Promise<TokenResponseDto> {
     return this.authService.refreshTokens(dto.refreshToken);
@@ -63,7 +75,9 @@ export class AuthController {
     @Req() req: Request & { user: User },
     @Body() body: Partial<RefreshTokenDto>,
   ) {
-    const authHeader = (req as any).headers?.authorization as string | undefined;
+    const authHeader = (req as any).headers?.authorization as
+      | string
+      | undefined;
     const token = authHeader?.replace('Bearer ', '');
     if (token) await this.authService.logout(token, body?.refreshToken);
   }

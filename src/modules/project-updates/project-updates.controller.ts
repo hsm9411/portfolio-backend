@@ -31,9 +31,7 @@ import { User } from '../../entities/user/user.entity';
 @ApiTags('project-updates')
 @Controller('projects')
 export class ProjectUpdatesController {
-  constructor(
-    private readonly projectUpdatesService: ProjectUpdatesService,
-  ) {}
+  constructor(private readonly projectUpdatesService: ProjectUpdatesService) {}
 
   @Get(':projectId/updates')
   @ApiOperation({ summary: '프로젝트 업데이트 타임라인 조회' })

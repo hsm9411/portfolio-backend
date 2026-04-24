@@ -84,14 +84,17 @@ describe('AuthService', () => {
   describe('refreshTokens', () => {
     it('throws UnauthorizedException for invalid/expired token', async () => {
       cache.get.mockResolvedValue(null);
-      await expect(service.refreshTokens('invalid-token')).rejects.toThrow(UnauthorizedException);
+      await expect(service.refreshTokens('invalid-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
     it('rotates tokens: deletes old and issues new', async () => {
       cache.get.mockResolvedValue('user-uuid');
       userRepo.findOne.mockResolvedValue(mockUser);
 
-      const { accessToken, refreshToken } = await service.refreshTokens('old-rti');
+      const { accessToken, refreshToken } =
+        await service.refreshTokens('old-rti');
 
       expect(cache.del).toHaveBeenCalledWith('auth:refresh:old-rti');
       expect(cache.set).toHaveBeenCalledWith(
@@ -118,7 +121,11 @@ describe('AuthService', () => {
   describe('logout', () => {
     it('blacklists jti with remaining TTL', async () => {
       const futureExp = Math.floor(Date.now() / 1000) + 900;
-      jwtService.decode.mockReturnValue({ jti: 'mock-jti', exp: futureExp, rti: 'mock-rti' });
+      jwtService.decode.mockReturnValue({
+        jti: 'mock-jti',
+        exp: futureExp,
+        rti: 'mock-rti',
+      });
 
       await service.logout('some-access-token');
 
@@ -132,7 +139,11 @@ describe('AuthService', () => {
     });
 
     it('invalidates refresh token on logout', async () => {
-      jwtService.decode.mockReturnValue({ jti: 'mock-jti', exp: Math.floor(Date.now() / 1000) + 900, rti: 'mock-rti' });
+      jwtService.decode.mockReturnValue({
+        jti: 'mock-jti',
+        exp: Math.floor(Date.now() / 1000) + 900,
+        rti: 'mock-rti',
+      });
 
       await service.logout('some-access-token');
 
@@ -140,7 +151,11 @@ describe('AuthService', () => {
     });
 
     it('uses explicitly provided refreshToken over rti in token', async () => {
-      jwtService.decode.mockReturnValue({ jti: 'mock-jti', exp: Math.floor(Date.now() / 1000) + 900, rti: 'embedded-rti' });
+      jwtService.decode.mockReturnValue({
+        jti: 'mock-jti',
+        exp: Math.floor(Date.now() / 1000) + 900,
+        rti: 'embedded-rti',
+      });
 
       await service.logout('access-token', 'explicit-rti');
 
@@ -148,7 +163,9 @@ describe('AuthService', () => {
     });
 
     it('does not throw when token decode fails', async () => {
-      jwtService.decode.mockImplementation(() => { throw new Error('invalid'); });
+      jwtService.decode.mockImplementation(() => {
+        throw new Error('invalid');
+      });
       await expect(service.logout('bad-token')).resolves.not.toThrow();
     });
   });
@@ -173,7 +190,9 @@ describe('AuthService', () => {
 
     it('throws NotFoundException when user does not exist', async () => {
       userRepo.findOne.mockResolvedValue(null);
-      await expect(service.findById('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

@@ -2,7 +2,7 @@ import type { Request } from 'express';
 
 /**
  * Cloudflare Proxy 환경에서 실제 클라이언트 IP 추출
- * 
+ *
  * 우선순위:
  * 1. CF-Connecting-IP (Cloudflare가 제공하는 실제 IP)
  * 2. X-Real-IP
@@ -25,7 +25,9 @@ export function getClientIp(req: Request): string {
   // X-Forwarded-For
   const xForwardedFor = req.headers['x-forwarded-for'];
   if (xForwardedFor) {
-    const ips = (Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor).split(',');
+    const ips = (
+      Array.isArray(xForwardedFor) ? xForwardedFor[0] : xForwardedFor
+    ).split(',');
     return ips[0].trim();
   }
 
