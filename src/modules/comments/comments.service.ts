@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -19,6 +20,8 @@ import {
 
 @Injectable()
 export class CommentsService {
+  private readonly logger = new Logger(CommentsService.name);
+
   constructor(
     @InjectRepository(Comment)
     private readonly commentRepository: Repository<Comment>,
@@ -111,7 +114,9 @@ export class CommentsService {
     });
 
     const saved = await this.commentRepository.save(comment);
-    await this.incrementCommentCount(targetType, targetId);
+    this.incrementCommentCount(targetType, targetId).catch((err) =>
+      this.logger.error(`Failed to increment comment count: ${err.message}`),
+    );
 
     return {
       id: saved.id,
@@ -180,9 +185,10 @@ export class CommentsService {
       throw new ForbiddenException('댓글 삭제 권한이 없습니다.');
     }
 
-    comment.isDeleted = true;
-    await this.commentRepository.save(comment);
-    await this.decrementCommentCount(comment.targetType, comment.targetId);
+    await this.commentRepository.update({ id }, { isDeleted: true });
+    this.decrementCommentCount(comment.targetType, comment.targetId).catch((err) =>
+      this.logger.error(`Failed to decrement comment count: ${err.message}`),
+    );
   }
 
   private async incrementCommentCount(targetType: TargetType, targetId: string): Promise<void> {
