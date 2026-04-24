@@ -17,20 +17,20 @@ export class ThrottlerBehindProxyGuard extends ThrottlerGuard {
     // Cloudflare가 제공하는 실제 IP 헤더
     const cfConnectingIp = req.headers['cf-connecting-ip'];
     if (cfConnectingIp) {
-      return cfConnectingIp as string;
+      return Promise.resolve(cfConnectingIp as string);
     }
 
     // X-Real-IP (일반 프록시)
     const xRealIp = req.headers['x-real-ip'];
     if (xRealIp) {
-      return xRealIp as string;
+      return Promise.resolve(xRealIp as string);
     }
 
     // X-Forwarded-For (첫 번째 IP = 원본 클라이언트)
     const xForwardedFor = req.headers['x-forwarded-for'];
     if (xForwardedFor) {
       const ips = (xForwardedFor as string).split(',');
-      return ips[0].trim();
+      return Promise.resolve(ips[0].trim());
     }
 
     // 기본값: Express req.ip (trust proxy 설정 필요)
