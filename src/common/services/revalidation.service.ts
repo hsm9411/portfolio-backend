@@ -26,7 +26,9 @@ export class RevalidationService {
     const secret = process.env.REVALIDATE_SECRET;
 
     if (!frontendUrl || !secret) {
-      this.logger.warn('Revalidation skipped: FRONTEND_URL or REVALIDATE_SECRET not set');
+      this.logger.warn(
+        'Revalidation skipped: FRONTEND_URL or REVALIDATE_SECRET not set',
+      );
       return;
     }
 
@@ -44,7 +46,7 @@ export class RevalidationService {
       );
       this.logger.log(
         `Revalidated: ${payload.type}/${payload.id ?? payload.slug ?? 'list'}` +
-        (attempt > 1 ? ` (attempt ${attempt})` : ''),
+          (attempt > 1 ? ` (attempt ${attempt})` : ''),
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

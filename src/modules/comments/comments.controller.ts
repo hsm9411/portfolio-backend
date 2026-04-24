@@ -11,7 +11,12 @@ import {
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
 import { CommentsService } from './comments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
@@ -42,7 +47,12 @@ export class CommentsController {
     @Query() dto: GetCommentsDto,
     @CurrentUser() user?: User,
   ): Promise<PaginatedCommentsResponseDto> {
-    return this.commentsService.findByTarget(targetType, targetId, dto, user?.id);
+    return this.commentsService.findByTarget(
+      targetType,
+      targetId,
+      dto,
+      user?.id,
+    );
   }
 
   @Post(':targetType/:targetId')
@@ -58,7 +68,13 @@ export class CommentsController {
     @Req() req: Request,
   ): Promise<CommentResponseDto> {
     const clientIp = getClientIp(req);
-    return this.commentsService.create(user, targetType, targetId, dto, clientIp);
+    return this.commentsService.create(
+      user,
+      targetType,
+      targetId,
+      dto,
+      clientIp,
+    );
   }
 
   @Put(':id')

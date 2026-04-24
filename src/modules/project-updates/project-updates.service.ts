@@ -48,7 +48,9 @@ export class ProjectUpdatesService {
     });
 
     const saved = await this.projectUpdateRepository.save(update);
-    this.logger.log(`ProjectUpdate created: ${saved.id} (project: ${projectId})`);
+    this.logger.log(
+      `ProjectUpdate created: ${saved.id} (project: ${projectId})`,
+    );
     return saved;
   }
 

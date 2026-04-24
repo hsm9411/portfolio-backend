@@ -45,12 +45,15 @@ export class PostsService {
       const client = (this.cacheManager.stores[0] as any).store?.client;
       const keys: string[] = await client.keys(`${CACHE_PREFIX}*`);
       if (keys.length > 0) await client.del(keys);
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   }
 
   async findAll(dto: GetPostsDto): Promise<PaginatedPostsResponseDto> {
     const cacheKey = `${CACHE_PREFIX}${JSON.stringify(dto)}`;
-    const cached = await this.cacheManager.get<PaginatedPostsResponseDto>(cacheKey);
+    const cached =
+      await this.cacheManager.get<PaginatedPostsResponseDto>(cacheKey);
     if (cached) return cached;
 
     const query = this.postRepository.createQueryBuilder('post');
@@ -67,9 +70,12 @@ export class PostsService {
       query.andWhere('post.tags && :tags', { tags: dto.tags });
     }
 
-    const sortColumn = dto.sortBy === 'view_count' ? 'post.viewCount' :
-                       dto.sortBy === 'like_count' ? 'post.likeCount' :
-                       'post.createdAt';
+    const sortColumn =
+      dto.sortBy === 'view_count'
+        ? 'post.viewCount'
+        : dto.sortBy === 'like_count'
+          ? 'post.likeCount'
+          : 'post.createdAt';
     query.orderBy(sortColumn, dto.order);
     query.skip(dto.skip).take(dto.take);
 

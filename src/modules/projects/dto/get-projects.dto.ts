@@ -1,13 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsOptional,
-  IsInt,
-  Min,
-  Max,
-  IsString,
-  IsEnum,
-} from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsString, IsEnum } from 'class-validator';
 
 export class GetProjectsDto {
   @ApiPropertyOptional({
