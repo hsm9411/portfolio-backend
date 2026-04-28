@@ -46,3 +46,17 @@ scrape_configs:
       - targets: ['10.0.0.34:8080']
         labels:
           server: prod
+
+  # Dev nginx 메트릭 — nginx-exporter (monitoring 네트워크 내부)
+  - job_name: nginx-dev
+    static_configs:
+      - targets: ['portfolio-nginx-exporter-dev:9113']
+        labels:
+          server: dev
+
+  # Dev Redis 메트릭 — redis-exporter (monitoring 네트워크 내부)
+  - job_name: redis-dev
+    static_configs:
+      - targets: ['portfolio-redis-exporter-dev:9121']
+        labels:
+          server: dev
