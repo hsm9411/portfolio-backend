@@ -256,7 +256,7 @@ jobs:
           scp monitoring/prometheus/prometheus.yml     ${USER}@${HOST}:~/monitoring/prometheus/prometheus.yml
           printf 'GRAFANA_ADMIN_PASSWORD=%s\n' '${{ secrets.GRAFANA_ADMIN_PASSWORD }}' > /tmp/monitoring.env
           scp /tmp/monitoring.env ${USER}@${HOST}:~/monitoring/.env
-          ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d"
+          ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d && docker exec portfolio-prometheus wget -qO- --post-data='' http://localhost:9090/-/reload || true"
 
       - name: Verify deployment
         env:
