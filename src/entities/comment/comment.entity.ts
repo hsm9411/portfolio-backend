@@ -22,9 +22,9 @@ export class Comment {
   id: string;
 
   // Polymorphic 관계
-  @Column({ 
+  @Column({
     name: 'target_type',
-    type: 'text'
+    type: 'text',
   })
   targetType: TargetType;
 

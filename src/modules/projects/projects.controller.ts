@@ -59,7 +59,11 @@ export class ProjectsController {
    */
   @Get('featured')
   @ApiOperation({ summary: 'Featured 프로젝트 목록' })
-  @ApiResponse({ status: 200, description: '조회 성공', type: [ProjectResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: '조회 성공',
+    type: [ProjectResponseDto],
+  })
   async findFeatured(): Promise<ProjectResponseDto[]> {
     return this.projectsService.findFeatured();
   }

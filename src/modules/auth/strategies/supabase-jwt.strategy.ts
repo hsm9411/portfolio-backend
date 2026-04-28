@@ -19,7 +19,10 @@ import * as jwksRsa from 'jwks-rsa';
  * 6. req.user에 User 객체 주입
  */
 @Injectable()
-export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jwt') {
+export class SupabaseJwtStrategy extends PassportStrategy(
+  Strategy,
+  'supabase-jwt',
+) {
   private readonly logger = new Logger(SupabaseJwtStrategy.name);
   private readonly adminEmails: string[];
 
@@ -29,7 +32,7 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
     private readonly userRepository: Repository<User>,
   ) {
     const supabaseUrl = configService.get<string>('SUPABASE_URL');
-    
+
     if (!supabaseUrl) {
       throw new Error('SUPABASE_URL이 설정되지 않았습니다.');
     }
@@ -40,7 +43,7 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
       audience: 'authenticated', // Supabase 기본 audience
       issuer: `${supabaseUrl}/auth/v1`,
       algorithms: ['ES256'], // 비대칭키 알고리즘
-      
+
       // ✅ 핵심: JWKS 엔드포인트에서 공개키 동적 로드
       secretOrKeyProvider: jwksRsa.passportJwtSecret({
         cache: true,
@@ -54,10 +57,12 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
     const adminEmailsStr = configService.get<string>('ADMIN_EMAILS') || '';
     this.adminEmails = adminEmailsStr
       .split(',')
-      .map(email => email.trim())
-      .filter(email => email.length > 0);
+      .map((email) => email.trim())
+      .filter((email) => email.length > 0);
 
-    this.logger.log(`관리자 이메일 목록: ${this.adminEmails.join(', ') || '없음'}`);
+    this.logger.log(
+      `관리자 이메일 목록: ${this.adminEmails.join(', ') || '없음'}`,
+    );
   }
 
   /**
@@ -68,7 +73,8 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
     const email = payload.email;
     const provider = payload.app_metadata?.provider || 'email';
     const providerId = payload.user_metadata?.provider_id;
-    const fullName = payload.user_metadata?.full_name || payload.email?.split('@')[0];
+    const fullName =
+      payload.user_metadata?.full_name || payload.email?.split('@')[0];
     const avatarUrl = payload.user_metadata?.avatar_url;
 
     if (!supabaseUserId) {
@@ -98,7 +104,9 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jw
       await this.userRepository.save(user);
     } else {
       if (user.isAdmin !== isAdmin) {
-        this.logger.log(`관리자 권한 업데이트: ${email} (${user.isAdmin} → ${isAdmin})`);
+        this.logger.log(
+          `관리자 권한 업데이트: ${email} (${user.isAdmin} → ${isAdmin})`,
+        );
         user.isAdmin = isAdmin;
         await this.userRepository.save(user);
       }

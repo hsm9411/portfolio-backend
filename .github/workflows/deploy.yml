@@ -5,6 +5,10 @@ on:
     branches:
       - main
       - develop
+  pull_request:
+    branches:
+      - main
+      - develop
   workflow_dispatch:
 
 concurrency:
@@ -17,11 +21,36 @@ env:
 
 jobs:
   # ============================================================
-  # Job 1: Docker 이미지 빌드 & GHCR Push (공통)
+  # Job 1: Lint (PR 및 배포 전 게이트)
+  # ============================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint:ci
+
+  # ============================================================
+  # Job 2: Docker 이미지 빌드 & GHCR Push (push 이벤트만)
   # ============================================================
   build-and-push:
     name: Build and Push Docker Image
+    needs: lint
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read
       packages: write
@@ -61,13 +90,13 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ============================================================
-  # Job 2: main → Production 배포
+  # Job 3: main → Production 배포 (Server 1: 158.180.75.205)
   # ============================================================
   deploy-prod:
     name: Deploy to Production
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
 
     steps:
       - name: Checkout code
@@ -76,7 +105,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.ORACLE_SSH_KEY_PROD }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           cat >> ~/.ssh/config << 'EOF'
           Host *
@@ -88,26 +117,26 @@ jobs:
 
       - name: Prepare directories and network
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} "docker network inspect global-portfolio-network >/dev/null 2>&1 || docker network create global-portfolio-network"
-          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/prod ~/portfolio-backend/nginx/ssl/dev ~/portfolio-backend/nginx/logs"
+          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/prod ~/portfolio-backend/nginx/logs"
 
       - name: Deploy files
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          scp docker-compose.yml              ${USER}@${HOST}:~/portfolio-backend/docker-compose.yml
-          scp docker-compose.nginx.yml        ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
-          scp nginx/conf.d/portfolio.conf     ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
-          scp deploy.sh                       ${USER}@${HOST}:~/portfolio-backend/deploy.sh
+          scp docker-compose.yml                   ${USER}@${HOST}:~/portfolio-backend/docker-compose.yml
+          scp docker-compose.nginx.yml             ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
+          scp nginx/conf.d/portfolio-prod.conf     ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
+          scp deploy.sh                            ${USER}@${HOST}:~/portfolio-backend/deploy.sh
 
       - name: Start or reload Nginx
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} "
@@ -123,7 +152,7 @@ jobs:
 
       - name: Deploy application
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
@@ -131,7 +160,7 @@ jobs:
 
       - name: Verify deployment
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           sleep 15
@@ -140,13 +169,13 @@ jobs:
           echo "Production deployment verified!"
 
   # ============================================================
-  # Job 3: develop → Development 배포
+  # Job 4: develop → Development 배포 (Server 2: 152.67.216.145)
   # ============================================================
   deploy-dev:
     name: Deploy to Development
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' && github.event_name != 'pull_request'
 
     steps:
       - name: Checkout code
@@ -155,7 +184,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.ORACLE_SSH_KEY_DEV }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           cat >> ~/.ssh/config << 'EOF'
           Host *
@@ -167,24 +196,24 @@ jobs:
 
       - name: Prepare directories and network
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} "docker network inspect global-portfolio-network >/dev/null 2>&1 || docker network create global-portfolio-network"
-          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/prod ~/portfolio-backend/nginx/ssl/dev ~/portfolio-backend/nginx/logs"
+          ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/dev ~/portfolio-backend/nginx/logs"
           ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev"
 
       - name: Deploy Nginx files
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          scp docker-compose.nginx.yml        ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
-          scp nginx/conf.d/portfolio.conf     ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
+          scp docker-compose.nginx.yml             ${USER}@${HOST}:~/portfolio-backend/docker-compose.nginx.yml
+          scp nginx/conf.d/portfolio-dev.conf      ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
 
       - name: Start or reload Nginx
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           ssh ${USER}@${HOST} "
@@ -200,7 +229,7 @@ jobs:
 
       - name: Deploy application
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
@@ -210,7 +239,7 @@ jobs:
 
       - name: Verify deployment
         env:
-          HOST: ${{ secrets.ORACLE_HOST }}
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
           sleep 15

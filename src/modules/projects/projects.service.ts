@@ -35,12 +35,15 @@ export class ProjectsService {
       const client = (this.cacheManager.stores[0] as any).store?.client;
       const keys: string[] = await client.keys(`${CACHE_PREFIX}*`);
       if (keys.length > 0) await client.del(keys);
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   }
 
   async findAll(dto: GetProjectsDto): Promise<PaginatedProjectsResponseDto> {
     const cacheKey = `${CACHE_PREFIX}${JSON.stringify(dto)}`;
-    const cached = await this.cacheManager.get<PaginatedProjectsResponseDto>(cacheKey);
+    const cached =
+      await this.cacheManager.get<PaginatedProjectsResponseDto>(cacheKey);
     if (cached) return cached;
 
     const query = this.projectRepository.createQueryBuilder('project');
@@ -56,9 +59,12 @@ export class ProjectsService {
       );
     }
 
-    const sortColumn = dto.sortBy === 'created_at' ? 'project.createdAt' :
-                       dto.sortBy === 'view_count' ? 'project.viewCount' :
-                       'project.likeCount';
+    const sortColumn =
+      dto.sortBy === 'created_at'
+        ? 'project.createdAt'
+        : dto.sortBy === 'view_count'
+          ? 'project.viewCount'
+          : 'project.likeCount';
 
     query.orderBy(sortColumn, dto.order);
     query.skip(dto.skip).take(dto.take);
@@ -91,7 +97,8 @@ export class ProjectsService {
   }
 
   async create(user: User, dto: CreateProjectDto): Promise<Project> {
-    if (!user.isAdmin) throw new ForbiddenException('관리자만 프로젝트를 생성할 수 있습니다.');
+    if (!user.isAdmin)
+      throw new ForbiddenException('관리자만 프로젝트를 생성할 수 있습니다.');
 
     const project = this.projectRepository.create({
       ...dto,
@@ -107,7 +114,11 @@ export class ProjectsService {
     return saved;
   }
 
-  async update(id: string, user: User, dto: UpdateProjectDto): Promise<Project> {
+  async update(
+    id: string,
+    user: User,
+    dto: UpdateProjectDto,
+  ): Promise<Project> {
     const project = await this.findOne(id);
     if (project.authorId !== user.id && !user.isAdmin) {
       throw new ForbiddenException('수정 권한이 없습니다.');

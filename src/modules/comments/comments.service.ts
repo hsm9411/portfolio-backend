@@ -58,7 +58,11 @@ export class CommentsService {
       isMine: currentUserId === comment.authorId,
       user: comment.isAnonymous
         ? { id: null, nickname: '익명', avatarUrl: null }
-        : { id: comment.authorId, nickname: comment.authorNickname, avatarUrl: comment.authorAvatarUrl },
+        : {
+            id: comment.authorId,
+            nickname: comment.authorNickname,
+            avatarUrl: comment.authorAvatarUrl,
+          },
       parentId: comment.parentId,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
@@ -94,7 +98,9 @@ export class CommentsService {
       }
 
       if (parent.targetType !== targetType || parent.targetId !== targetId) {
-        throw new ForbiddenException('같은 대상의 댓글에만 답글을 달 수 있습니다.');
+        throw new ForbiddenException(
+          '같은 대상의 댓글에만 답글을 달 수 있습니다.',
+        );
       }
     }
 
@@ -186,24 +192,39 @@ export class CommentsService {
     }
 
     await this.commentRepository.update({ id }, { isDeleted: true });
-    this.decrementCommentCount(comment.targetType, comment.targetId).catch((err) =>
-      this.logger.error(`Failed to decrement comment count: ${err.message}`),
+    this.decrementCommentCount(comment.targetType, comment.targetId).catch(
+      (err) =>
+        this.logger.error(`Failed to decrement comment count: ${err.message}`),
     );
   }
 
-  private async incrementCommentCount(targetType: TargetType, targetId: string): Promise<void> {
+  private async incrementCommentCount(
+    targetType: TargetType,
+    targetId: string,
+  ): Promise<void> {
     if (targetType === TargetType.POST) {
       await this.postRepository.increment({ id: targetId }, 'commentCount', 1);
     } else {
-      await this.projectRepository.increment({ id: targetId }, 'commentCount', 1);
+      await this.projectRepository.increment(
+        { id: targetId },
+        'commentCount',
+        1,
+      );
     }
   }
 
-  private async decrementCommentCount(targetType: TargetType, targetId: string): Promise<void> {
+  private async decrementCommentCount(
+    targetType: TargetType,
+    targetId: string,
+  ): Promise<void> {
     if (targetType === TargetType.POST) {
       await this.postRepository.decrement({ id: targetId }, 'commentCount', 1);
     } else {
-      await this.projectRepository.decrement({ id: targetId }, 'commentCount', 1);
+      await this.projectRepository.decrement(
+        { id: targetId },
+        'commentCount',
+        1,
+      );
     }
   }
 }

@@ -37,13 +37,23 @@ export class AuthService {
   }
 
   async saveRefreshToken(userId: string, rti: string): Promise<void> {
-    await this.cacheManager.set(`${REFRESH_PREFIX}${rti}`, userId, REFRESH_TTL_MS);
+    await this.cacheManager.set(
+      `${REFRESH_PREFIX}${rti}`,
+      userId,
+      REFRESH_TTL_MS,
+    );
   }
 
-  async refreshTokens(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
-    const userId = await this.cacheManager.get<string>(`${REFRESH_PREFIX}${refreshToken}`);
+  async refreshTokens(
+    refreshToken: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const userId = await this.cacheManager.get<string>(
+      `${REFRESH_PREFIX}${refreshToken}`,
+    );
     if (!userId) {
-      throw new UnauthorizedException('유효하지 않거나 만료된 리프레시 토큰입니다.');
+      throw new UnauthorizedException(
+        '유효하지 않거나 만료된 리프레시 토큰입니다.',
+      );
     }
 
     const user = await this.findById(userId);
@@ -58,11 +68,15 @@ export class AuthService {
 
   async logout(token: string, refreshToken?: string): Promise<void> {
     try {
-      const decoded = this.jwtService.decode(token) as { jti?: string; exp?: number; rti?: string };
+      const decoded = this.jwtService.decode(token);
       if (decoded?.jti && decoded?.exp) {
         const ttl = (decoded.exp - Math.floor(Date.now() / 1000)) * 1000;
         if (ttl > 0) {
-          await this.cacheManager.set(`${BLACKLIST_PREFIX}${decoded.jti}`, '1', ttl);
+          await this.cacheManager.set(
+            `${BLACKLIST_PREFIX}${decoded.jti}`,
+            '1',
+            ttl,
+          );
         }
       }
 
@@ -71,7 +85,9 @@ export class AuthService {
       if (rti) {
         await this.cacheManager.del(`${REFRESH_PREFIX}${rti}`);
       }
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
   }
 
   async isTokenBlacklisted(jti: string): Promise<boolean> {

@@ -67,7 +67,12 @@ describe('ProjectsService', () => {
         ProjectsService,
         { provide: getRepositoryToken(Project), useValue: repo },
         { provide: CACHE_MANAGER, useValue: cache },
-        { provide: RevalidationService, useValue: { revalidateProject: jest.fn().mockResolvedValue(undefined) } },
+        {
+          provide: RevalidationService,
+          useValue: {
+            revalidateProject: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -76,7 +81,13 @@ describe('ProjectsService', () => {
 
   describe('findAll', () => {
     it('returns cached result on cache hit', async () => {
-      const cached = { items: [mockProject], total: 1, page: 1, pageSize: 10, totalPages: 1 };
+      const cached = {
+        items: [mockProject],
+        total: 1,
+        page: 1,
+        pageSize: 10,
+        totalPages: 1,
+      };
       cache.get.mockResolvedValue(cached);
 
       const result = await service.findAll(new GetProjectsDto());
@@ -101,7 +112,9 @@ describe('ProjectsService', () => {
 
       await service.findAll(dto);
 
-      expect(qb.andWhere).toHaveBeenCalledWith('project.status = :status', { status: 'completed' });
+      expect(qb.andWhere).toHaveBeenCalledWith('project.status = :status', {
+        status: 'completed',
+      });
     });
 
     it('applies search filter with ILIKE', async () => {
@@ -126,7 +139,9 @@ describe('ProjectsService', () => {
 
     it('throws NotFoundException when not found', async () => {
       repo.findOne.mockResolvedValue(null);
-      await expect(service.findOne('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -141,7 +156,9 @@ describe('ProjectsService', () => {
     };
 
     it('throws ForbiddenException for non-admin', async () => {
-      await expect(service.create(otherUser, dto as any)).rejects.toThrow(ForbiddenException);
+      await expect(service.create(otherUser, dto as any)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('creates project with author info for admin', async () => {
@@ -152,7 +169,10 @@ describe('ProjectsService', () => {
       const result = await service.create(adminUser, dto as any);
 
       expect(repo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ authorId: adminUser.id, authorNickname: adminUser.nickname }),
+        expect.objectContaining({
+          authorId: adminUser.id,
+          authorNickname: adminUser.nickname,
+        }),
       );
       expect(result).toEqual(created);
     });
@@ -161,14 +181,18 @@ describe('ProjectsService', () => {
   describe('update', () => {
     it('throws ForbiddenException when not owner and not admin', async () => {
       repo.findOne.mockResolvedValue(mockProject);
-      await expect(service.update('project-uuid', otherUser, { title: 'X' })).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.update('project-uuid', otherUser, { title: 'X' }),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('updates project when user is owner', async () => {
       repo.findOne.mockResolvedValue(mockProject);
       repo.save.mockResolvedValue({ ...mockProject, title: 'Updated' });
 
-      const result = await service.update('project-uuid', adminUser, { title: 'Updated' });
+      const result = await service.update('project-uuid', adminUser, {
+        title: 'Updated',
+      });
 
       expect(result.title).toBe('Updated');
     });
@@ -177,7 +201,9 @@ describe('ProjectsService', () => {
   describe('remove', () => {
     it('throws ForbiddenException when not owner and not admin', async () => {
       repo.findOne.mockResolvedValue(mockProject);
-      await expect(service.remove('project-uuid', otherUser)).rejects.toThrow(ForbiddenException);
+      await expect(service.remove('project-uuid', otherUser)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('removes project when user is owner', async () => {
