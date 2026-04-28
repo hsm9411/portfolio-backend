@@ -1,0 +1,48 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Dev 앱 메트릭 — Docker 내부 네트워크 (global-portfolio-network)
+  - job_name: backend-dev
+    static_configs:
+      - targets: ['portfolio-backend-dev:3000']
+        labels:
+          server: dev
+
+  # Prod 앱 메트릭 — nginx /metrics (Server 2 public IP만 허용)
+  - job_name: backend-prod
+    scheme: https
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['hsm9411.duckdns.org']
+        labels:
+          server: prod
+
+  # Dev 시스템 메트릭 — node-exporter (network_mode: host → 10.0.0.196)
+  - job_name: node-dev
+    static_configs:
+      - targets: ['10.0.0.196:9100']
+        labels:
+          server: dev
+
+  # Prod 시스템 메트릭 — node-exporter (OCI 내부망)
+  - job_name: node-prod
+    static_configs:
+      - targets: ['10.0.0.34:9100']
+        labels:
+          server: prod
+
+  # Dev 컨테이너 메트릭 — cAdvisor (monitoring 네트워크 내부)
+  - job_name: cadvisor-dev
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          server: dev
+
+  # Prod 컨테이너 메트릭 — cAdvisor (OCI 내부망)
+  - job_name: cadvisor-prod
+    static_configs:
+      - targets: ['10.0.0.34:8080']
+        labels:
+          server: prod

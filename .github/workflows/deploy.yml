@@ -158,6 +158,15 @@ jobs:
         run: |
           ssh ${USER}@${HOST} "cd ~/portfolio-backend && chmod +x deploy.sh && export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && export IMAGE_TAG=latest && ./deploy.sh"
 
+      - name: Deploy monitoring exporters
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_PROD }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "mkdir -p ~/monitoring"
+          scp monitoring/docker-compose.exporters.yml ${USER}@${HOST}:~/monitoring/docker-compose.yml
+          ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d"
+
       - name: Verify deployment
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
@@ -236,6 +245,18 @@ jobs:
           scp docker-compose.dev.yml  ${USER}@${HOST}:~/portfolio-backend-dev/docker-compose.yml
           scp deploy.sh               ${USER}@${HOST}:~/portfolio-backend-dev/deploy.sh
           ssh ${USER}@${HOST} "cd ~/portfolio-backend-dev && chmod +x deploy.sh && export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && export IMAGE_TAG=develop && ./deploy.sh"
+
+      - name: Deploy monitoring stack
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "mkdir -p ~/monitoring/prometheus"
+          scp monitoring/docker-compose.monitoring.yml ${USER}@${HOST}:~/monitoring/docker-compose.yml
+          scp monitoring/prometheus/prometheus.yml     ${USER}@${HOST}:~/monitoring/prometheus/prometheus.yml
+          printf 'GRAFANA_ADMIN_PASSWORD=%s\n' '${{ secrets.GRAFANA_ADMIN_PASSWORD }}' > /tmp/monitoring.env
+          scp /tmp/monitoring.env ${USER}@${HOST}:~/monitoring/.env
+          ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d"
 
       - name: Verify deployment
         env:
