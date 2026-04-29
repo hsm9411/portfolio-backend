@@ -275,7 +275,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(100 * (redis_memory_used_bytes{instance=~\"$instance\"} / redis_memory_max_bytes{instance=~\"$instance\"}))",
+          "expr": "sum(100 * (redis_memory_used_bytes{instance=~\"$instance\"}  / redis_memory_max_bytes{instance=~\"$instance\"}))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -735,7 +735,7 @@
           "expr": "sum(rate(redis_net_input_bytes_total{instance=~\"$instance\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "input",
+          "legendFormat": "{{ input }}",
           "refId": "A",
           "step": 240
         },
@@ -748,7 +748,7 @@
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "output",
+          "legendFormat": "{{ output }}",
           "refId": "B",
           "step": 240
         }
@@ -1056,7 +1056,53 @@
           "unit": "short",
           "unitScale": true
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "evicts"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#890F02",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "memcached_items_evicted_total{instance=\"172.17.0.1:9150\",job=\"prometheus\"}"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#890F02",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reclaims"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#3F6833",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 7,
@@ -1454,24 +1500,6 @@
   ],
   "templating": {
     "list": [
-      {
-        "current": {
-          "selected": false,
-          "text": "Prometheus",
-          "value": "prometheus"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Datasource",
-        "multi": false,
-        "name": "DS_PROM",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
       {
         "current": {},
         "datasource": {

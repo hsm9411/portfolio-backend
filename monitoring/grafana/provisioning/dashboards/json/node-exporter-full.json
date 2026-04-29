@@ -15442,7 +15442,7 @@
           "refId": "Prometheus-job-Variable-Query"
         },
         "refresh": 1,
-        "regex": "",
+        "regex": "node_exporter",
         "sort": 1,
         "type": "query"
       },

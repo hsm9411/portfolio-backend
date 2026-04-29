@@ -89,7 +89,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{instance=~\"$host\",name=~\"$container\",name=~\".+\"}[5m])) by (name) *100",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}[5m])) by (name) *100",
           "hide": false,
           "interval": "",
           "legendFormat": "{{name}}",
@@ -209,7 +209,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(container_memory_rss{instance=~\"$host\",name=~\"$container\",name=~\".+\"}) by (name)",
+          "expr": "sum(container_memory_rss{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}) by (name)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{name}}",
@@ -312,7 +312,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(container_memory_cache{instance=~\"$host\",name=~\"$container\",name=~\".+\"}) by (name)",
+          "expr": "sum(container_memory_cache{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}) by (name)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{name}}",
@@ -435,7 +435,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_network_receive_bytes_total{instance=~\"$host\",name=~\"$container\",name=~\".+\"}[5m])) by (name)",
+          "expr": "sum(rate(container_network_receive_bytes_total{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}[5m])) by (name)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{name}}",
@@ -538,7 +538,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_network_transmit_bytes_total{instance=~\"$host\",name=~\"$container\",name=~\".+\"}[5m])) by (name)",
+          "expr": "sum(rate(container_network_transmit_bytes_total{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}[5m])) by (name)",
           "interval": "",
           "legendFormat": "{{name}}",
           "refId": "A"
@@ -686,7 +686,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "(time() - container_start_time_seconds{instance=~\"$host\",name=~\"$container\",name=~\".+\"})/86400",
+          "expr": "(time() - container_start_time_seconds{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"})/86400",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -797,17 +797,17 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values({__name__=~\"container.*\", instance=~\"$host\"},name)",
+        "definition": "label_values(container_last_seen{container_label_com_docker_compose_service!=\"\",instance=~\"$host\"}, container_label_com_docker_compose_service)",
         "description": null,
         "error": null,
         "hide": 0,
         "includeAll": true,
         "label": "Container",
-        "multi": false,
+        "multi": true,
         "name": "container",
         "options": [],
         "query": {
-          "query": "label_values({__name__=~\"container.*\", instance=~\"$host\"},name)",
+          "query": "label_values(container_last_seen{container_label_com_docker_compose_service!=\"\",instance=~\"$host\"}, container_label_com_docker_compose_service)",
           "refId": "Prometheus-container-Variable-Query"
         },
         "refresh": 1,
