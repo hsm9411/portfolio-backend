@@ -29,6 +29,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
     networks:
       - monitoring
       - app
@@ -65,6 +66,10 @@ services:
       - /dev/disk/:/dev/disk:ro
     devices:
       - /dev/kmsg
+    command:
+      - --docker=unix:///var/run/docker.sock
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.service
     networks:
       - monitoring
 
