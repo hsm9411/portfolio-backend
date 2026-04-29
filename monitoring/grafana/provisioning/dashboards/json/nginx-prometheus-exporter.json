@@ -455,9 +455,8 @@
       {
         "current": {
           "selected": false,
-          "tags": [],
-          "text": "default",
-          "value": "default"
+          "text": "Prometheus",
+          "value": "prometheus"
         },
         "hide": 0,
         "includeAll": false,
