@@ -22,13 +22,13 @@ DATASOURCE_UID = "prometheus"
 DASHBOARDS = [
     (1860,  "node-exporter-full"),
     (12708, "nginx-prometheus-exporter"),
-    (11835, "redis-dashboard"),
+    (763,   "redis-dashboard"),   # Docker 환경용 (#11835은 Kubernetes 전용이므로 사용 불가)
     (14282, "cadvisor"),
 ]
 
 
 def patch_datasource(obj):
-    """모든 prometheus datasource 참조를 provisioned UID로 교체."""
+    """모든 prometheus datasource 참조를 provisioned UID로 교체 (object 형식)."""
     if isinstance(obj, dict):
         if obj.get("type") == "prometheus" and "uid" in obj:
             obj["uid"] = DATASOURCE_UID
@@ -42,13 +42,65 @@ def patch_datasource(obj):
     return obj
 
 
+def patch_ds_current(data, var_name="DS_PROMETHEUS"):
+    """데이터소스 template 변수의 current를 provisioned datasource로 명시."""
+    for var in data.get("templating", {}).get("list", []):
+        if var.get("name") == var_name and var.get("type") == "datasource":
+            var["current"] = {"selected": False, "text": "Prometheus", "value": DATASOURCE_UID}
+    return data
+
+
+def ensure_datasource_var(data, var_name="DS_PROMETHEUS"):
+    """지정된 datasource template 변수가 없으면 templating 목록 앞에 추가."""
+    templating = data.setdefault("templating", {})
+    vars_list = templating.setdefault("list", [])
+    if any(v.get("name") == var_name for v in vars_list):
+        return data
+    ds_var = {
+        "current": {"selected": False, "text": "Prometheus", "value": DATASOURCE_UID},
+        "hide": 0,
+        "includeAll": False,
+        "label": "Datasource",
+        "multi": False,
+        "name": var_name,
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": False,
+        "type": "datasource",
+    }
+    vars_list.insert(0, ds_var)
+    return data
+
+
+def patch_redis_template_vars(data):
+    """Redis 대시보드 template 변수를 Docker 환경(namespace 라벨 없음)에 맞게 수정."""
+    vars_list = data.get("templating", {}).get("list", [])
+
+    # namespace 변수 제거 (Kubernetes 전용 라벨 — Docker에서는 비어 있어 instance 조회도 막힘)
+    vars_list = [v for v in vars_list if v.get("name") != "namespace"]
+
+    # instance 변수: namespace 의존성 제거 → redis_up에서 직접 조회
+    for v in vars_list:
+        if v.get("name") == "instance":
+            simple_query = "label_values(redis_up, instance)"
+            v["definition"] = simple_query
+            if isinstance(v.get("query"), dict):
+                v["query"]["query"] = simple_query
+            else:
+                v["query"] = simple_query
+
+    data["templating"]["list"] = vars_list
+    return data
+
+
 def patch_node_exporter_jobs(data: dict) -> dict:
     """
     Node Exporter Full(#1860)의 job 변수 regex를 우리 job 이름(node_exporter)에 맞게 수정.
     다른 대시보드에 적용해도 무해하다.
     """
     text = json.dumps(data)
-    # 기본 regex 패턴을 node_exporter 포함으로 통일
     text = re.sub(
         r'"integrations/node_exporter\|node_exporter\|node\|nodeexporter"',
         '"node_exporter"',
@@ -68,13 +120,25 @@ def download_dashboard(dashboard_id: int, name: str) -> bool:
         print(f"  ERROR: {exc}")
         return False
 
-    # 불필요한 import 메타 제거 (provisioning 시 문제 유발 가능)
+    # 불필요한 import 메타 제거
     data.pop("__inputs", None)
+    data.pop("__elements", None)
     data.pop("__requires", None)
     data["id"] = None  # Grafana가 자동 할당
 
     data = patch_datasource(data)
     data = patch_node_exporter_jobs(data)
+
+    # 대시보드별 추가 패치
+    if dashboard_id == 763:
+        # Redis: Docker 환경용으로 namespace 변수 제거
+        data = patch_redis_template_vars(data)
+    elif dashboard_id == 14282:
+        # cAdvisor: DS_PROMETHEUS 변수 자체가 없어 패널 datasource 미해결 → 추가
+        data = ensure_datasource_var(data, "DS_PROMETHEUS")
+    elif dashboard_id == 12708:
+        # nginx: DS_PROMETHEUS current 값 명시 (기본값 "default"는 provisioning 시 미해결 가능)
+        data = patch_ds_current(data, "DS_PROMETHEUS")
 
     out_path = os.path.join(JSON_DIR, f"{name}.json")
     with open(out_path, "w", encoding="utf-8") as f:
