@@ -251,9 +251,16 @@ jobs:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          ssh ${USER}@${HOST} "mkdir -p ~/monitoring/prometheus"
-          scp monitoring/docker-compose.monitoring.yml ${USER}@${HOST}:~/monitoring/docker-compose.yml
-          scp monitoring/prometheus/prometheus.yml     ${USER}@${HOST}:~/monitoring/prometheus/prometheus.yml
+          ssh ${USER}@${HOST} "mkdir -p ~/monitoring/prometheus ~/monitoring/grafana/provisioning/datasources ~/monitoring/grafana/provisioning/dashboards/json"
+          scp monitoring/docker-compose.monitoring.yml                              ${USER}@${HOST}:~/monitoring/docker-compose.yml
+          scp monitoring/prometheus/prometheus.yml                                  ${USER}@${HOST}:~/monitoring/prometheus/prometheus.yml
+          scp monitoring/grafana/provisioning/datasources/prometheus.yml            ${USER}@${HOST}:~/monitoring/grafana/provisioning/datasources/prometheus.yml
+          scp monitoring/grafana/provisioning/dashboards/dashboards.yml             ${USER}@${HOST}:~/monitoring/grafana/provisioning/dashboards/dashboards.yml
+          scp monitoring/grafana/provisioning/dashboards/json/node-exporter-full.json \
+              monitoring/grafana/provisioning/dashboards/json/nginx-prometheus-exporter.json \
+              monitoring/grafana/provisioning/dashboards/json/redis-dashboard.json \
+              monitoring/grafana/provisioning/dashboards/json/cadvisor.json \
+              ${USER}@${HOST}:~/monitoring/grafana/provisioning/dashboards/json/
           printf 'GRAFANA_ADMIN_PASSWORD=%s\n' '${{ secrets.GRAFANA_ADMIN_PASSWORD }}' > /tmp/monitoring.env
           scp /tmp/monitoring.env ${USER}@${HOST}:~/monitoring/.env
           ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d && docker exec portfolio-prometheus wget -qO- --post-data='' http://localhost:9090/-/reload || true"
