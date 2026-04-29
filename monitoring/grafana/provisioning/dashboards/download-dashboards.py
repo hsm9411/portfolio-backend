@@ -28,8 +28,9 @@ DASHBOARDS = [
 
 
 def patch_datasource(obj):
-    """모든 prometheus datasource 참조를 provisioned UID로 교체 (object 형식)."""
+    """모든 prometheus datasource 참조를 provisioned UID로 교체 (dict/list 형식)."""
     if isinstance(obj, dict):
+        # 신형 dict format: {"type": "prometheus", "uid": "${DS_...}"}
         if obj.get("type") == "prometheus" and "uid" in obj:
             obj["uid"] = DATASOURCE_UID
         elif isinstance(obj.get("uid"), str) and obj["uid"].startswith("${DS_"):
@@ -40,6 +41,21 @@ def patch_datasource(obj):
         for item in obj:
             patch_datasource(item)
     return obj
+
+
+def patch_string_datasource_refs(data: dict) -> dict:
+    """구형 string format datasource 참조 ('${DS_...}') → UID dict로 교체.
+
+    cadvisor/nginx 계열 대시보드가 panel datasource를 string으로 저장하는 경우를 처리한다.
+    patch_datasource는 dict 형식만 다루므로 string 형식은 별도 처리가 필요하다.
+    """
+    text = json.dumps(data)
+    text = re.sub(
+        r'"datasource"\s*:\s*"\$\{DS_[^}]+\}"',
+        f'"datasource": {{"type": "prometheus", "uid": "{DATASOURCE_UID}"}}',
+        text,
+    )
+    return json.loads(text)
 
 
 def patch_ds_current(data, var_name="DS_PROMETHEUS"):
@@ -126,18 +142,24 @@ def download_dashboard(dashboard_id: int, name: str) -> bool:
     data.pop("__requires", None)
     data["id"] = None  # Grafana가 자동 할당
 
-    data = patch_datasource(data)
+    data = patch_datasource(data)            # dict format uid 패치
+    data = patch_string_datasource_refs(data) # string format datasource 패치
     data = patch_node_exporter_jobs(data)
 
     # 대시보드별 추가 패치
-    if dashboard_id == 763:
-        # Redis: Docker 환경용으로 namespace 변수 제거
+    if dashboard_id == 1860:
+        # node-exporter: 소문자 ds_prometheus 변수 current 명시
+        data = patch_ds_current(data, "ds_prometheus")
+    elif dashboard_id == 763:
+        # Redis: Docker 환경용으로 namespace 변수 제거 + DS_PROM current 명시
         data = patch_redis_template_vars(data)
+        data = patch_ds_current(data, "DS_PROM")
     elif dashboard_id == 14282:
-        # cAdvisor: DS_PROMETHEUS 변수 자체가 없어 패널 datasource 미해결 → 추가
+        # cAdvisor: DS_PROMETHEUS 변수가 없으면 추가 + current 명시
         data = ensure_datasource_var(data, "DS_PROMETHEUS")
+        data = patch_ds_current(data, "DS_PROMETHEUS")
     elif dashboard_id == 12708:
-        # nginx: DS_PROMETHEUS current 값 명시 (기본값 "default"는 provisioning 시 미해결 가능)
+        # nginx: DS_PROMETHEUS current 값 명시
         data = patch_ds_current(data, "DS_PROMETHEUS")
 
     out_path = os.path.join(JSON_DIR, f"{name}.json")
