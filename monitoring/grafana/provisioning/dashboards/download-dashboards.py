@@ -125,6 +125,55 @@ def patch_node_exporter_jobs(data: dict) -> dict:
     return json.loads(text)
 
 
+def patch_node_exporter_job_regex(data: dict) -> dict:
+    """Node Exporter Full job 변수 regex를 node_exporter로 고정.
+
+    Prometheus job_name=node_exporter 하나만 존재하므로 regex 명시.
+    이 설정이 없으면 드롭다운에 다른 job이 섞일 수 있음.
+    """
+    for var in data.get("templating", {}).get("list", []):
+        if var.get("name") == "job" and var.get("type") == "query":
+            var["regex"] = "node_exporter"
+    return data
+
+
+def patch_cadvisor_for_docker_compose(data: dict) -> dict:
+    """cAdvisor 대시보드를 Docker Compose 서비스 라벨 기반으로 수정.
+
+    cAdvisor 설정에 --whitelisted_container_labels=com.docker.compose.service가 있으므로
+    container_label_com_docker_compose_service 라벨이 항상 존재.
+    cgroupv2+systemd 환경에서 불안정한 name 라벨 대신 이 라벨을 사용.
+    """
+    # container 변수 쿼리: name 라벨 → container_label_com_docker_compose_service
+    for var in data.get("templating", {}).get("list", []):
+        if var.get("name") == "container" and var.get("type") == "query":
+            new_query = (
+                "label_values(container_last_seen"
+                "{container_label_com_docker_compose_service!=\"\","
+                "instance=~\"$host\"}, container_label_com_docker_compose_service)"
+            )
+            var["definition"] = new_query
+            if isinstance(var.get("query"), dict):
+                var["query"]["query"] = new_query
+            else:
+                var["query"] = new_query
+            var["multi"] = True
+            var["includeAll"] = True
+
+    # 패널 쿼리: name=~"$container" → container_label_com_docker_compose_service=~"$container"
+    text = json.dumps(data)
+    text = text.replace(
+        'name=~\\"$container\\"',
+        'container_label_com_docker_compose_service=~\\"$container\\"',
+    )
+    # name=~".+" → container_label_com_docker_compose_service!="" (루트/시스템 컨테이너 제외)
+    text = text.replace(
+        ',name=~\\".+\\"',
+        ',container_label_com_docker_compose_service!=\\"\\"',
+    )
+    return json.loads(text)
+
+
 def download_dashboard(dashboard_id: int, name: str) -> bool:
     url = f"https://grafana.com/api/dashboards/{dashboard_id}/revisions/latest/download"
     print(f"  Downloading #{dashboard_id} ({name})...")
@@ -148,16 +197,18 @@ def download_dashboard(dashboard_id: int, name: str) -> bool:
 
     # 대시보드별 추가 패치
     if dashboard_id == 1860:
-        # node-exporter: 소문자 ds_prometheus 변수 current 명시
+        # node-exporter: 소문자 ds_prometheus 변수 current 명시 + job regex 고정
         data = patch_ds_current(data, "ds_prometheus")
+        data = patch_node_exporter_job_regex(data)
     elif dashboard_id == 763:
         # Redis: Docker 환경용으로 namespace 변수 제거 + DS_PROM current 명시
         data = patch_redis_template_vars(data)
         data = patch_ds_current(data, "DS_PROM")
     elif dashboard_id == 14282:
-        # cAdvisor: DS_PROMETHEUS 변수가 없으면 추가 + current 명시
+        # cAdvisor: DS_PROMETHEUS 변수 추가 + current 명시 + Docker Compose 라벨 기반으로 수정
         data = ensure_datasource_var(data, "DS_PROMETHEUS")
         data = patch_ds_current(data, "DS_PROMETHEUS")
+        data = patch_cadvisor_for_docker_compose(data)
     elif dashboard_id == 12708:
         # nginx: DS_PROMETHEUS current 값 명시
         data = patch_ds_current(data, "DS_PROMETHEUS")
