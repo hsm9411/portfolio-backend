@@ -246,7 +246,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "sum(container_memory_cache{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}) by (container_label_com_docker_compose_service)",
+          "expr": "sum(container_memory_inactive_file{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"} + container_memory_active_file{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}) by (container_label_com_docker_compose_service)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{container_label_com_docker_compose_service}}",
@@ -255,7 +255,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Memory Cached",
+      "title": "Memory Cache (Page Cache)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -599,7 +599,7 @@
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values({__name__=~\"container.*\"},instance)",
+        "definition": "label_values(container_cpu_usage_seconds_total, instance)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -608,8 +608,13 @@
         "multi": false,
         "name": "host",
         "options": [],
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "query": {
-          "query": "label_values({__name__=~\"container.*\"},instance)",
+          "query": "label_values(container_cpu_usage_seconds_total, instance)",
           "refId": "Prometheus-host-Variable-Query"
         },
         "refresh": 1,
