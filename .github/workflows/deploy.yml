@@ -273,6 +273,4 @@ jobs:
           sleep 15
           ssh ${USER}@${HOST} "docker ps | grep portfolio"
           ssh ${USER}@${HOST} "curl -sf https://hsm9411-dev.duckdns.org/health && echo 'HTTPS OK' || echo 'health check done'"
-          echo "--- cadvisor-dev logs (last 50 lines, BACK-55 진단용) ---"
-          ssh ${USER}@${HOST} "docker logs portfolio-cadvisor-dev --tail 50 2>&1 || echo 'cadvisor logs unavailable'"
           echo "Development deployment verified!"
