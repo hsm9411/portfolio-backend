@@ -84,6 +84,9 @@ certbot/
 # AI Context (local-only harness, never commit)
 .ai-context/
 
+# Claude instructions (local-only)
+CLAUDE.md
+
 # Python
 __pycache__/
 *.pyc
