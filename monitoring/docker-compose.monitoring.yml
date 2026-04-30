@@ -74,7 +74,7 @@ services:
     command:
       - --docker=unix:///var/run/docker.sock
       - --store_container_labels=false
-      - --allowlisted_container_labels=com.docker.compose.service
+      - --whitelisted_container_labels=com.docker.compose.service
       - --housekeeping_interval=30s
       - --max_housekeeping_interval=60s
       - --disable_metrics=disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,cpu_topology,resctrl
