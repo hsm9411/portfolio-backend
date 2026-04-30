@@ -38,4 +38,4 @@ services:
     command:
       - --docker=unix:///var/run/docker.sock
       - --store_container_labels=false
-      - --whitelisted_container_labels=com.docker.compose.service
+      - --allowlisted_container_labels=com.docker.compose.service
