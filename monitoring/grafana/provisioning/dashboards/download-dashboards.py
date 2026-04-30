@@ -137,6 +137,79 @@ def patch_node_exporter_job_regex(data: dict) -> dict:
     return data
 
 
+_GRAPH_YAXIS_FORMAT_TO_UNIT = {
+    "percent": "percent",
+    "percentunit": "percentunit",
+    "bytes": "bytes",
+    "kbytes": "kbytes",
+    "Bps": "Bps",
+    "bps": "bps",
+    "short": "short",
+    "ms": "ms",
+    "s": "s",
+    "none": "none",
+}
+
+_GRAPH_ONLY_KEYS = {
+    "yaxes", "yaxis", "xaxis", "aliasColors", "bars", "dashes",
+    "dashLength", "fill", "fillGradient", "lines", "linewidth",
+    "nullPointMode", "percentage", "points", "pointradius",
+    "renderer", "seriesOverrides", "spaceLength", "stack",
+    "steppedLine", "thresholds", "timeRegions", "paceLength",
+    "legend",
+}
+
+
+def convert_graph_to_timeseries(data: dict) -> dict:
+    """deprecated 'graph' 패널을 modern 'timeseries' 패널로 변환.
+
+    Grafana 11.x에서 Angular 기반 graph 패널 렌더링이 불안정하므로
+    timeseries 패널로 변환하여 안정적인 React 기반 렌더링을 사용.
+    yaxes[0].format을 fieldConfig.defaults.unit으로 이전.
+    """
+    for panel in data.get("panels", []):
+        if panel.get("type") != "graph":
+            continue
+
+        unit = "short"
+        yaxes = panel.get("yaxes", [])
+        if yaxes and isinstance(yaxes[0], dict):
+            fmt = yaxes[0].get("format", "short")
+            unit = _GRAPH_YAXIS_FORMAT_TO_UNIT.get(fmt, fmt)
+
+        panel["type"] = "timeseries"
+        panel["fieldConfig"] = {
+            "defaults": {
+                "color": {"mode": "palette-classic"},
+                "custom": {
+                    "lineInterpolation": "linear",
+                    "lineWidth": 1,
+                    "fillOpacity": 10,
+                    "gradientMode": "none",
+                    "showPoints": "never",
+                    "spanNulls": False,
+                },
+                "unit": unit,
+                "mappings": [],
+                "thresholds": {
+                    "mode": "absolute",
+                    "steps": [{"color": "green", "value": None}],
+                },
+            },
+            "overrides": [],
+        }
+        panel["options"] = {
+            "tooltip": {"mode": "multi", "sort": "none"},
+            "legend": {"displayMode": "list", "placement": "bottom"},
+        }
+
+        for key in list(panel.keys()):
+            if key in _GRAPH_ONLY_KEYS:
+                del panel[key]
+
+    return data
+
+
 def patch_cadvisor_for_docker_compose(data: dict) -> dict:
     """cAdvisor 대시보드를 Docker Compose 서비스 라벨 기반으로 수정.
 
@@ -145,10 +218,11 @@ def patch_cadvisor_for_docker_compose(data: dict) -> dict:
     cgroupv2+systemd 환경에서 불안정한 name 라벨 대신 이 라벨을 사용.
     """
     # container 변수 쿼리: name 라벨 → container_label_com_docker_compose_service
+    # container_last_seen 대신 container_cpu_usage_seconds_total 사용 (cAdvisor 버전 불문 안정적)
     for var in data.get("templating", {}).get("list", []):
         if var.get("name") == "container" and var.get("type") == "query":
             new_query = (
-                "label_values(container_last_seen"
+                "label_values(container_cpu_usage_seconds_total"
                 "{container_label_com_docker_compose_service!=\"\","
                 "instance=~\"$host\"}, container_label_com_docker_compose_service)"
             )
@@ -159,6 +233,7 @@ def patch_cadvisor_for_docker_compose(data: dict) -> dict:
                 var["query"] = new_query
             var["multi"] = True
             var["includeAll"] = True
+            var["current"] = {"selected": True, "text": "All", "value": "$__all"}
 
     # 패널 쿼리: name=~"$container" → container_label_com_docker_compose_service=~"$container"
     text = json.dumps(data)
@@ -216,9 +291,11 @@ def download_dashboard(dashboard_id: int, name: str) -> bool:
         data = patch_ds_current(data, "DS_PROM")
     elif dashboard_id == 14282:
         # cAdvisor: DS_PROMETHEUS 변수 추가 + current 명시 + Docker Compose 라벨 기반으로 수정
+        #           + deprecated graph 패널 → timeseries 변환 (Grafana 11.x 호환)
         data = ensure_datasource_var(data, "DS_PROMETHEUS")
         data = patch_ds_current(data, "DS_PROMETHEUS")
         data = patch_cadvisor_for_docker_compose(data)
+        data = convert_graph_to_timeseries(data)
     elif dashboard_id == 12708:
         # nginx: DS_PROMETHEUS current 값 명시
         data = patch_ds_current(data, "DS_PROMETHEUS")
