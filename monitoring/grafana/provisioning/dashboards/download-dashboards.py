@@ -171,6 +171,16 @@ def patch_cadvisor_for_docker_compose(data: dict) -> dict:
         ',name=~\\".+\\"',
         ',container_label_com_docker_compose_service!=\\"\\"',
     )
+    # by (name) → by (container_label_com_docker_compose_service) (cgroupv2에서 name 라벨 없음)
+    text = text.replace(
+        ') by (name)',
+        ') by (container_label_com_docker_compose_service)',
+    )
+    # legendFormat: {{name}} → {{container_label_com_docker_compose_service}}
+    text = text.replace(
+        '"legendFormat": "{{name}}"',
+        '"legendFormat": "{{container_label_com_docker_compose_service}}"',
+    )
     return json.loads(text)
 
 
