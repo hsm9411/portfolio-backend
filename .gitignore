@@ -83,3 +83,7 @@ certbot/
 
 # AI Context (local-only harness, never commit)
 .ai-context/
+
+# Python
+__pycache__/
+*.pyc
