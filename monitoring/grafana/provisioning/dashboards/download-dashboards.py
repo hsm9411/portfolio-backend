@@ -137,6 +137,27 @@ def patch_node_exporter_job_regex(data: dict) -> dict:
     return data
 
 
+_VALUENAME_TO_CALC = {
+    "current": "lastNotNull",
+    "last":    "last",
+    "avg":     "mean",
+    "total":   "sum",
+    "max":     "max",
+    "min":     "min",
+    "first":   "first",
+    "count":   "count",
+    "delta":   "delta",
+    "diff":    "diff",
+}
+
+_SINGLESTAT_ONLY_KEYS = {
+    "colorBackground", "colorValue", "colorPrefix", "colorPostfix",
+    "format", "valueName", "valueMaps", "valueFontSize",
+    "prefixFontSize", "postfixFontSize", "prefix", "postfix",
+    "sparkline", "thresholds", "colors", "mappingType", "mappingTypes",
+    "rangeMaps", "tableColumn", "gauge", "nullText", "nullPointMode",
+}
+
 _GRAPH_YAXIS_FORMAT_TO_UNIT = {
     "percent": "percent",
     "percentunit": "percentunit",
@@ -158,6 +179,90 @@ _GRAPH_ONLY_KEYS = {
     "steppedLine", "thresholds", "timeRegions", "paceLength",
     "legend",
 }
+
+
+def convert_singlestat_to_stat(data: dict) -> dict:
+    """deprecated 'singlestat' 패널을 modern 'stat' 패널로 변환.
+
+    Grafana 11.x에서 Angular 기반 singlestat 렌더링이 제거되었으므로
+    React 기반 stat 패널로 변환한다.
+    colorBackground/Value, thresholds(colors), valueMaps를 이전.
+    """
+    for panel in data.get("panels", []):
+        if panel.get("type") != "singlestat":
+            continue
+
+        unit = panel.get("format", "short")
+        calc = _VALUENAME_TO_CALC.get(panel.get("valueName", "current"), "lastNotNull")
+
+        color_mode = "none"
+        if panel.get("colorBackground"):
+            color_mode = "background"
+        elif panel.get("colorValue"):
+            color_mode = "value"
+
+        colors = panel.get("colors", ["green", "orange", "red"])
+        threshold_str = panel.get("thresholds", "")
+        threshold_values = []
+        for v in threshold_str.split(","):
+            v = v.strip()
+            if v:
+                try:
+                    threshold_values.append(float(v))
+                except ValueError:
+                    pass
+
+        # 같은 임계값에 여러 색상이 있을 때 마지막 색상 우선 (더 높은 범위 색상 사용)
+        step_map: dict = {None: colors[0]}
+        for i, tv in enumerate(threshold_values):
+            idx = i + 1
+            if idx < len(colors):
+                step_map[tv] = colors[idx]
+
+        steps = sorted(
+            [{"color": c, "value": v} for v, c in step_map.items()],
+            key=lambda s: (s["value"] is not None, s["value"] or 0),
+        )
+
+        mappings = []
+        value_maps = panel.get("valueMaps", [])
+        if value_maps:
+            options = {
+                vm["value"]: {"text": vm["text"], "index": i}
+                for i, vm in enumerate(value_maps)
+                if vm.get("op") == "="
+            }
+            if options:
+                mappings.append({"type": "value", "options": options})
+
+        panel["type"] = "stat"
+        panel["fieldConfig"] = {
+            "defaults": {
+                "color": {"mode": "thresholds"},
+                "mappings": mappings,
+                "thresholds": {"mode": "absolute", "steps": steps},
+                "unit": unit,
+            },
+            "overrides": [],
+        }
+        panel["options"] = {
+            "colorMode": color_mode,
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+                "calcs": [calc],
+                "fields": "",
+                "values": False,
+            },
+            "textMode": "auto",
+        }
+
+        for key in list(panel.keys()):
+            if key in _SINGLESTAT_ONLY_KEYS:
+                del panel[key]
+
+    return data
 
 
 def convert_graph_to_timeseries(data: dict) -> dict:
@@ -298,7 +403,10 @@ def download_dashboard(dashboard_id: int, name: str) -> bool:
         data = convert_graph_to_timeseries(data)
     elif dashboard_id == 12708:
         # nginx: DS_PROMETHEUS current 값 명시
+        #        + deprecated singlestat → stat, graph → timeseries (Grafana 11.x 호환)
         data = patch_ds_current(data, "DS_PROMETHEUS")
+        data = convert_singlestat_to_stat(data)
+        data = convert_graph_to_timeseries(data)
 
     out_path = os.path.join(JSON_DIR, f"{name}.json")
     with open(out_path, "w", encoding="utf-8") as f:
