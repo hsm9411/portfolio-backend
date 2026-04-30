@@ -339,6 +339,17 @@ def patch_cadvisor_for_docker_compose(data: dict) -> dict:
             var["multi"] = True
             var["includeAll"] = True
             var["current"] = {"selected": True, "text": "All", "value": "$__all"}
+        elif var.get("name") == "host" and var.get("type") == "query":
+            # host 쿼리: {__name__=~"container.*"}(수천 series 스캔, 고비용/실패 시 empty) →
+            #            container_cpu_usage_seconds_total(항상 존재, 단일 메트릭)
+            # current 미설정이면 Grafana 11에서 "All" 미선택 → instance="" → 모든 패널 No data
+            host_query = "label_values(container_cpu_usage_seconds_total, instance)"
+            var["definition"] = host_query
+            if isinstance(var.get("query"), dict):
+                var["query"]["query"] = host_query
+            else:
+                var["query"] = host_query
+            var["current"] = {"selected": True, "text": "All", "value": "$__all"}
 
     # 패널 쿼리: name=~"$container" → container_label_com_docker_compose_service=~"$container"
     text = json.dumps(data)
@@ -360,6 +371,17 @@ def patch_cadvisor_for_docker_compose(data: dict) -> dict:
     text = text.replace(
         '"legendFormat": "{{name}}"',
         '"legendFormat": "{{container_label_com_docker_compose_service}}"',
+    )
+    # Memory Cache 패널: container_memory_cache는 cgroups v2 환경에서 미노출 →
+    #                    container_memory_inactive_file + container_memory_active_file 합산으로 교체
+    text = re.sub(
+        r'sum\(container_memory_cache(\{[^}]*\})\)',
+        r'sum(container_memory_inactive_file\1 + container_memory_active_file\1)',
+        text,
+    )
+    text = text.replace(
+        '"title": "Memory Cached"',
+        '"title": "Memory Cache (Page Cache)"',
     )
     return json.loads(text)
 

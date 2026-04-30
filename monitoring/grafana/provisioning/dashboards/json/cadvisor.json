@@ -594,7 +594,11 @@
       },
       {
         "allValue": ".*",
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
@@ -608,11 +612,6 @@
         "multi": false,
         "name": "host",
         "options": [],
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
         "query": {
           "query": "label_values(container_cpu_usage_seconds_total, instance)",
           "refId": "Prometheus-host-Variable-Query"
