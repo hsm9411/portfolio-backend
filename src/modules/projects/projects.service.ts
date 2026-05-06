@@ -20,6 +20,14 @@ import {
 
 const CACHE_PREFIX = 'projects:list:';
 const CACHE_TTL = 60 * 1000; // 60s
+const CACHE_KEY_FIELDS = [
+  'page',
+  'limit',
+  'search',
+  'status',
+  'sortBy',
+  'order',
+] as const;
 
 @Injectable()
 export class ProjectsService {
@@ -41,7 +49,7 @@ export class ProjectsService {
   }
 
   async findAll(dto: GetProjectsDto): Promise<PaginatedProjectsResponseDto> {
-    const cacheKey = `${CACHE_PREFIX}${JSON.stringify(dto)}`;
+    const cacheKey = `${CACHE_PREFIX}${JSON.stringify(dto, [...CACHE_KEY_FIELDS])}`;
     const cached =
       await this.cacheManager.get<PaginatedProjectsResponseDto>(cacheKey);
     if (cached) return cached;

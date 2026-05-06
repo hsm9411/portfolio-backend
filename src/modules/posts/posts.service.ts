@@ -20,6 +20,14 @@ import {
 
 const CACHE_PREFIX = 'posts:list:';
 const CACHE_TTL = 60 * 1000; // 60s
+const CACHE_KEY_FIELDS = [
+  'page',
+  'limit',
+  'search',
+  'tags',
+  'sortBy',
+  'order',
+] as const;
 
 @Injectable()
 export class PostsService {
@@ -51,7 +59,7 @@ export class PostsService {
   }
 
   async findAll(dto: GetPostsDto): Promise<PaginatedPostsResponseDto> {
-    const cacheKey = `${CACHE_PREFIX}${JSON.stringify(dto)}`;
+    const cacheKey = `${CACHE_PREFIX}${JSON.stringify(dto, [...CACHE_KEY_FIELDS])}`;
     const cached =
       await this.cacheManager.get<PaginatedPostsResponseDto>(cacheKey);
     if (cached) return cached;
