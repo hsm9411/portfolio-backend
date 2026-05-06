@@ -37,5 +37,3 @@ services:
       - /dev/kmsg
     command:
       - --docker=unix:///var/run/docker.sock
-      - --store_container_labels=false
-      - --allowlisted_container_labels=com.docker.compose.service
