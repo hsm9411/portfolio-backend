@@ -11,14 +11,14 @@ IMAGE_NAME="ghcr.io/${GITHUB_REPOSITORY}:${IMAGE_TAG}"
 echo "📦 Pulling Docker image (${IMAGE_TAG})..."
 docker pull ${IMAGE_NAME}
 
-# app + redis 재시작 (nginx는 별도 compose 파일로 관리)
-echo "🔄 Restarting containers..."
+# docker-compose.yml 의 모든 서비스를 reconcile.
+# Compose v2 는 image diff + config diff 를 자동 처리 → 변경된 서비스만 재생성.
+# --remove-orphans 는 사용하지 않음: prod 에서 nginx 가 같은 디렉토리/프로젝트명을
+# 공유해, orphan 으로 인식되어 삭제될 위험이 있음 (warning 으로만 표시되도록 둠).
+echo "🔄 Reconciling services..."
 export GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
 export IMAGE_TAG=${IMAGE_TAG}
-# 컨테이너 이름 충돌 방지: 기존 컨테이너 강제 제거 후 재시작
-docker compose stop app 2>/dev/null || true
-docker compose rm -f app 2>/dev/null || true
-docker compose up -d app
+docker compose up -d
 
 # 오래된 이미지 정리
 echo "🧹 Cleaning up old images..."
