@@ -3,14 +3,13 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  # Dev 앱 메트릭 — Docker 내부 네트워크 (global-portfolio-network)
+  # 앱 메트릭
   - job_name: backend-dev
     static_configs:
       - targets: ['portfolio-backend-dev:3000']
         labels:
           server: dev
 
-  # Prod 앱 메트릭 — nginx /metrics (Server 2 public IP만 허용)
   - job_name: backend-prod
     scheme: https
     metrics_path: /metrics
@@ -19,43 +18,38 @@ scrape_configs:
         labels:
           server: prod
 
-  # Dev 시스템 메트릭 — node-exporter (network_mode: host → 10.0.0.196)
-  - job_name: node-dev
+  # 시스템 메트릭 — node-exporter (server 라벨로 dev/prod 구분)
+  # job_name=node_exporter → Node Exporter Full(#1860) 대시보드 기본 필터 일치
+  - job_name: node_exporter
     static_configs:
       - targets: ['10.0.0.196:9100']
         labels:
           server: dev
-
-  # Prod 시스템 메트릭 — node-exporter (OCI 내부망)
-  - job_name: node-prod
-    static_configs:
       - targets: ['10.0.0.34:9100']
         labels:
           server: prod
 
-  # Dev 컨테이너 메트릭 — cAdvisor (monitoring 네트워크 내부)
-  - job_name: cadvisor-dev
+  # 컨테이너 메트릭 — cAdvisor (server 라벨로 dev/prod 구분)
+  # job_name=cadvisor → cAdvisor 대시보드(#14282) 기본 필터 일치
+  - job_name: cadvisor
     static_configs:
       - targets: ['cadvisor:8080']
         labels:
           server: dev
-
-  # Prod 컨테이너 메트릭 — cAdvisor (OCI 내부망)
-  - job_name: cadvisor-prod
-    static_configs:
       - targets: ['10.0.0.34:8080']
         labels:
           server: prod
 
-  # Dev nginx 메트릭 — nginx-exporter (monitoring 네트워크 내부)
-  - job_name: nginx-dev
+  # nginx 메트릭 — dev 전용
+  - job_name: nginx
     static_configs:
       - targets: ['portfolio-nginx-exporter-dev:9113']
         labels:
           server: dev
 
-  # Dev Redis 메트릭 — redis-exporter (monitoring 네트워크 내부)
-  - job_name: redis-dev
+  # Redis 메트릭 — dev 전용
+  # job_name=redis_exporter → Redis 대시보드(#11835) 기본 필터 일치
+  - job_name: redis_exporter
     static_configs:
       - targets: ['portfolio-redis-exporter-dev:9121']
         labels:
