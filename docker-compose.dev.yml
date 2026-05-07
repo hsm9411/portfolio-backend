@@ -24,6 +24,9 @@ services:
     image: redis:7-alpine
     container_name: portfolio-redis-dev
     restart: unless-stopped
+    # maxmemory=0(unlimited)이면 redis_exporter가 redis_memory_max_bytes=0을 export →
+    # Grafana #763 Memory Usage 패널 식 (used / max)이 +Inf로 표시됨. 한도 + LRU eviction으로 고정.
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
     expose:
       - "6379"
     volumes:
