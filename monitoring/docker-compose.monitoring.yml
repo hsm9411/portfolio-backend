@@ -54,6 +54,9 @@ services:
     # Server 2(2GB RAM)에서 cadvisor 기본 설정이 OOM/CPU 과부하로 간헐 crash → 대시보드 No data.
     # housekeeping interval 늘리고 불필요 메트릭 disable + mem_limit으로 안정화.
     # healthcheck는 일부러 제외 — distroless 이미지에 wget이 없어 BACK-54에서 startup 실패.
+    # store_container_labels + whitelisted/allowlisted 조합은 v0.49.1에서 모든 컨테이너 라벨을
+    # 막아버려(BACK-64) 대시보드 패널이 No data. 라벨 발행은 default(true)에 맡기고
+    # cardinality는 disable_metrics로만 제어.
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: portfolio-cadvisor-dev
     restart: always
@@ -73,8 +76,6 @@ services:
       - /dev/kmsg
     command:
       - --docker=unix:///var/run/docker.sock
-      - --store_container_labels=false
-      - --whitelisted_container_labels=com.docker.compose.service
       - --housekeeping_interval=30s
       - --max_housekeeping_interval=60s
       - --disable_metrics=disk,diskIO,tcp,udp,percpu,sched,process,hugetlb,referenced_memory,cpu_topology,resctrl
