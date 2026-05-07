@@ -1,0 +1,95 @@
+name: Diagnose cAdvisor
+
+# BACK-67: cAdvisor 라벨 미발행(컨테이너 메타데이터가 메트릭에 안 붙음) 진단용.
+# workflow_dispatch만 — 배포 파이프라인엔 영향 없음.
+# 결과는 artifact로 업로드되며, 다운로드 후 로그/inspect를 분석해 본 수정안 도출.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  collect:
+    name: Collect cAdvisor diagnostics (dev)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.ORACLE_SSH_KEY_DEV }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          cat >> ~/.ssh/config << 'EOF'
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Prepare artifact directory
+        run: mkdir -p artifacts
+
+      - name: Collect cAdvisor container logs
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "docker logs --tail=2000 portfolio-cadvisor-dev 2>&1" \
+            > artifacts/cadvisor.log || echo "[step failed]" >> artifacts/cadvisor.log
+
+      - name: Collect docker inspect (cadvisor)
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "docker inspect portfolio-cadvisor-dev" \
+            > artifacts/cadvisor-inspect.json || echo "[step failed]"
+
+      - name: Collect docker daemon info
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "docker version"   > artifacts/docker-version.txt 2>&1 || true
+          ssh ${USER}@${HOST} "docker info"      > artifacts/docker-info.txt    2>&1 || true
+          ssh ${USER}@${HOST} "ls -la /var/run/docker.sock; stat /var/run/docker.sock" \
+                                                > artifacts/docker-sock-perms.txt 2>&1 || true
+          ssh ${USER}@${HOST} "uname -a; cat /etc/os-release" \
+                                                > artifacts/host-info.txt        2>&1 || true
+          ssh ${USER}@${HOST} "ls -la /sys/fs/cgroup | head -20; mount | grep cgroup" \
+                                                > artifacts/cgroup-info.txt      2>&1 || true
+
+      - name: Probe cAdvisor HTTP API via prometheus container
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          # cadvisor 이미지는 distroless라 docker exec로 wget 사용 불가.
+          # 같은 monitoring 네트워크의 prometheus 컨테이너에서 wget 경유 호출.
+          ssh ${USER}@${HOST} "docker exec portfolio-prometheus wget -qO- http://cadvisor:8080/api/v1.3/docker/ 2>&1 | head -200" \
+            > artifacts/cadvisor-api-docker.json || true
+          ssh ${USER}@${HOST} "docker exec portfolio-prometheus wget -qO- http://cadvisor:8080/api/v2.0/spec 2>&1 | head -200" \
+            > artifacts/cadvisor-api-spec.json || true
+          ssh ${USER}@${HOST} "docker exec portfolio-prometheus wget -qO- http://cadvisor:8080/healthz 2>&1" \
+            > artifacts/cadvisor-healthz.txt || true
+          ssh ${USER}@${HOST} "docker exec portfolio-prometheus wget -qO- http://cadvisor:8080/metrics 2>&1 | grep -E '^container_' | awk -F'{' '{print \$1}' | sort -u" \
+            > artifacts/cadvisor-metric-names.txt || true
+          ssh ${USER}@${HOST} "docker exec portfolio-prometheus wget -qO- http://cadvisor:8080/metrics 2>&1 | grep -c '^container_label_'" \
+            > artifacts/cadvisor-label-count.txt || true
+          ssh ${USER}@${HOST} "docker exec portfolio-prometheus wget -qO- http://cadvisor:8080/metrics 2>&1 | grep '^container_cpu_usage_seconds_total' | head -10" \
+            > artifacts/cadvisor-sample-cpu.txt || true
+
+      - name: Probe prometheus targets state
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
+          USER: ${{ secrets.ORACLE_USER }}
+        run: |
+          ssh ${USER}@${HOST} "docker exec portfolio-prometheus wget -qO- http://localhost:9090/api/v1/targets?state=active 2>&1" \
+            > artifacts/prom-targets.json || true
+
+      - name: Upload diagnostics artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cadvisor-diagnostics-${{ github.run_id }}
+          path: artifacts/
+          retention-days: 14
