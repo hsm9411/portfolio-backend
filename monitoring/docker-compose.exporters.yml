@@ -20,7 +20,9 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    # BACK-68: v0.49.1 docker client API 1.41이 docker engine 29.x(min 1.44)에 거부당해
+    # docker factory 등록 실패 → 컨테이너 메타데이터 미부착. v0.56.2로 업그레이드(docker/docker 26.x).
+    image: gcr.io/cadvisor/cadvisor:v0.56.2
     container_name: portfolio-cadvisor
     restart: unless-stopped
     privileged: true
