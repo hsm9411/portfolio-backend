@@ -1,6 +1,6 @@
-# Server 1 (Prod) 전용 — 시스템/컨테이너 메트릭 수집기
-# Server 2 Prometheus가 10.0.0.34:9100, 10.0.0.34:8080 으로 scrape
-# OCI Security List + UFW: 10.0.0.196 → 9100, 8080 허용 필요
+# Server 1 (Prod) 전용 — 시스템/컨테이너/Nginx/Redis 메트릭 수집기
+# Server 2 Prometheus가 10.0.0.34 의 9100, 8080, 9113, 9121 으로 scrape
+# OCI Security List + UFW: 10.0.0.196 → 9100, 8080, 9113, 9121 허용 필요
 
 services:
   node-exporter:
@@ -40,3 +40,33 @@ services:
       - /dev/kmsg
     command:
       - --docker=unix:///var/run/docker.sock
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.3.0
+    container_name: portfolio-nginx-exporter
+    restart: unless-stopped
+    command:
+      - --nginx.scrape-uri=http://portfolio-nginx:8080/stub_status
+    ports:
+      - "9113:9113"
+    networks:
+      - global
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.65.0
+    container_name: portfolio-redis-exporter
+    restart: unless-stopped
+    environment:
+      - REDIS_ADDR=redis://portfolio-redis:6379
+    ports:
+      - "9121:9121"
+    networks:
+      - prod-internal
+
+networks:
+  global:
+    external: true
+    name: global-portfolio-network
+  prod-internal:
+    external: true
+    name: portfolio-prod-internal

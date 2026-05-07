@@ -40,17 +40,23 @@ scrape_configs:
         labels:
           server: prod
 
-  # nginx 메트릭 — dev 전용
+  # nginx 메트릭 (server 라벨로 dev/prod 구분)
   - job_name: nginx
     static_configs:
       - targets: ['portfolio-nginx-exporter-dev:9113']
         labels:
           server: dev
+      - targets: ['10.0.0.34:9113']
+        labels:
+          server: prod
 
-  # Redis 메트릭 — dev 전용
+  # Redis 메트릭 (server 라벨로 dev/prod 구분)
   # job_name=redis_exporter → Redis 대시보드(#11835) 기본 필터 일치
   - job_name: redis_exporter
     static_configs:
       - targets: ['portfolio-redis-exporter-dev:9121']
         labels:
           server: dev
+      - targets: ['10.0.0.34:9121']
+        labels:
+          server: prod
