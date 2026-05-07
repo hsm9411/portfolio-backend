@@ -39,6 +39,7 @@ services:
 networks:
   internal:
     driver: bridge
+    name: portfolio-prod-internal
   global:
     external: true
     name: global-portfolio-network
