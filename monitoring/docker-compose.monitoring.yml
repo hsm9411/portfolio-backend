@@ -57,7 +57,8 @@ services:
     # BACK-68: v0.49.1 → v0.56.2 업그레이드. v0.49.1 docker client API 1.41이
     # docker engine 29.x(min 1.44)에 거부당해 docker factory 등록 실패 → 컨테이너 라벨/이름/이미지
     # 메타데이터가 메트릭에 부착되지 않던 문제 해소(v0.50+에서 docker/docker 26.x로 업그레이드됨).
-    image: gcr.io/cadvisor/cadvisor:v0.56.2
+    # v0.56부터 레지스트리가 gcr.io → ghcr.io 로 이전됨 (cadvisor PR#3806).
+    image: ghcr.io/google/cadvisor:v0.56.2
     container_name: portfolio-cadvisor-dev
     restart: always
     privileged: true
