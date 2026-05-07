@@ -246,7 +246,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "expr": "sum(container_memory_inactive_file{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"} + container_memory_active_file{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}) by (container_label_com_docker_compose_service)",
+          "expr": "sum(container_memory_total_inactive_file_bytes{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"} + container_memory_total_active_file_bytes{instance=~\"$host\",container_label_com_docker_compose_service=~\"$container\",container_label_com_docker_compose_service!=\"\"}) by (container_label_com_docker_compose_service)",
           "hide": false,
           "interval": "",
           "legendFormat": "{{container_label_com_docker_compose_service}}",
