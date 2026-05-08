@@ -167,15 +167,56 @@ jobs:
           scp monitoring/docker-compose.exporters.yml ${USER}@${HOST}:~/monitoring/docker-compose.yml
           ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d"
 
-      - name: Verify deployment
+      - name: Verify deployment (poll /health)
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          sleep 15
-          ssh ${USER}@${HOST} "docker ps | grep portfolio"
-          ssh ${USER}@${HOST} "curl -sf https://hsm9411.duckdns.org/health && echo 'HTTPS OK' || echo 'health check done'"
-          echo "Production deployment verified!"
+          echo "Polling https://hsm9411.duckdns.org/health (timeout 90s)..."
+          for i in $(seq 1 30); do
+            if curl -sf -m 5 https://hsm9411.duckdns.org/health >/dev/null; then
+              echo "Health OK after $((i * 3))s"
+              ssh ${USER}@${HOST} "docker ps | grep portfolio"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Health check failed after 90s — diagnostics below"
+          ssh ${USER}@${HOST} "docker ps -a | grep portfolio || true"
+          ssh ${USER}@${HOST} "docker logs --tail 80 portfolio-backend || true"
+          exit 1
+
+      - name: Rollback to previous image
+        if: failure()
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_PROD }}
+          USER: ${{ secrets.ORACLE_USER }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "::warning::Verify failed — attempting rollback to :previous-latest"
+          ssh ${USER}@${HOST} "
+            set -e
+            cd ~/portfolio-backend
+            PREVIOUS=ghcr.io/${GITHUB_REPOSITORY}:previous-latest
+            if ! docker image inspect \$PREVIOUS >/dev/null 2>&1; then
+              echo 'No :previous-latest image available — manual intervention required'
+              exit 1
+            fi
+            docker tag \$PREVIOUS ghcr.io/${GITHUB_REPOSITORY}:latest
+            export GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
+            export IMAGE_TAG=latest
+            docker compose up -d
+          "
+          echo "Polling /health after rollback (timeout 60s)..."
+          for i in $(seq 1 20); do
+            if curl -sf -m 5 https://hsm9411.duckdns.org/health >/dev/null; then
+              echo "::warning::Rollback successful — health OK after $((i * 3))s. Workflow remains failed so the bad deploy is visible."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Rollback applied but /health still failing — manual intervention needed"
+          exit 1
 
   # ============================================================
   # Job 4: develop → Development 배포 (Server 2: 152.67.216.145)
@@ -265,12 +306,53 @@ jobs:
           scp /tmp/monitoring.env ${USER}@${HOST}:~/monitoring/.env
           ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d && docker exec portfolio-prometheus wget -qO- --post-data='' http://localhost:9090/-/reload || true"
 
-      - name: Verify deployment
+      - name: Verify deployment (poll /health)
         env:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
         run: |
-          sleep 15
-          ssh ${USER}@${HOST} "docker ps | grep portfolio"
-          ssh ${USER}@${HOST} "curl -sf https://hsm9411-dev.duckdns.org/health && echo 'HTTPS OK' || echo 'health check done'"
-          echo "Development deployment verified!"
+          echo "Polling https://hsm9411-dev.duckdns.org/health (timeout 90s)..."
+          for i in $(seq 1 30); do
+            if curl -sf -m 5 https://hsm9411-dev.duckdns.org/health >/dev/null; then
+              echo "Health OK after $((i * 3))s"
+              ssh ${USER}@${HOST} "docker ps | grep portfolio"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Health check failed after 90s — diagnostics below"
+          ssh ${USER}@${HOST} "docker ps -a | grep portfolio || true"
+          ssh ${USER}@${HOST} "docker logs --tail 80 portfolio-backend-dev || true"
+          exit 1
+
+      - name: Rollback to previous image
+        if: failure()
+        env:
+          HOST: ${{ secrets.ORACLE_HOST_DEV }}
+          USER: ${{ secrets.ORACLE_USER }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "::warning::Verify failed — attempting rollback to :previous-develop"
+          ssh ${USER}@${HOST} "
+            set -e
+            cd ~/portfolio-backend-dev
+            PREVIOUS=ghcr.io/${GITHUB_REPOSITORY}:previous-develop
+            if ! docker image inspect \$PREVIOUS >/dev/null 2>&1; then
+              echo 'No :previous-develop image available — manual intervention required'
+              exit 1
+            fi
+            docker tag \$PREVIOUS ghcr.io/${GITHUB_REPOSITORY}:develop
+            export GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
+            export IMAGE_TAG=develop
+            docker compose up -d
+          "
+          echo "Polling /health after rollback (timeout 60s)..."
+          for i in $(seq 1 20); do
+            if curl -sf -m 5 https://hsm9411-dev.duckdns.org/health >/dev/null; then
+              echo "::warning::Rollback successful — health OK after $((i * 3))s. Workflow remains failed so the bad deploy is visible."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::Rollback applied but /health still failing — manual intervention needed"
+          exit 1
