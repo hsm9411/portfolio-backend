@@ -1,0 +1,76 @@
+name: GHCR Cleanup
+
+# GHCR 의 portfolio-backend 컨테이너 이미지 retention.
+# 보존 정책:
+#   - 영구 보존 태그: :latest, :develop, :main (디플로이가 직접 참조)
+#   - untagged (dangling): 최근 5 개만 남기고 삭제
+#   - tagged (위 보호 태그 외): 최근 30 개만 남기고 삭제
+# 안전을 위해 처음에는 CLEANUP_ENABLED='false' 로 두어 audit 로그만 남기고 삭제는 안 함.
+# 1-2 주 schedule audit 로그 검토 후 별도 PR 로 'true' 변경.
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # 매주 일요일 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+env:
+  CLEANUP_ENABLED: 'false'
+
+jobs:
+  cleanup:
+    name: Cleanup old GHCR container versions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: List current versions (audit)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "::group::Current versions of ghcr.io/${{ github.repository }}"
+          gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            "/users/${{ github.repository_owner }}/packages/container/portfolio-backend/versions?per_page=100" \
+            --jq '.[] | [.id, (.metadata.container.tags // [] | join(",")), .created_at] | @tsv' \
+            | sort -k3 -r \
+            | head -200
+          echo "::endgroup::"
+
+      - name: Dry-run notice
+        if: env.CLEANUP_ENABLED != 'true'
+        run: |
+          echo "::warning::CLEANUP_ENABLED=${{ env.CLEANUP_ENABLED }} → 삭제 단계 skip. 위 목록을 검토하여 보호 태그(:latest/:develop/:main)가 안전한지, 삭제 대상 후보가 적절한지 확인. 충분히 검증되면 .github/workflows/ghcr-cleanup.yml 의 CLEANUP_ENABLED 를 'true' 로 변경."
+
+      - name: Delete untagged versions (keep 5 newest)
+        if: env.CLEANUP_ENABLED == 'true'
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: portfolio-backend
+          package-type: container
+          delete-only-untagged-versions: 'true'
+          min-versions-to-keep: 5
+
+      - name: Delete old tagged versions (keep protected tags + 30 newest)
+        if: env.CLEANUP_ENABLED == 'true'
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: portfolio-backend
+          package-type: container
+          ignore-versions: '^(latest|develop|main)$'
+          min-versions-to-keep: 30
+
+      - name: List remaining versions (post-cleanup)
+        if: env.CLEANUP_ENABLED == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "::group::Remaining versions after cleanup"
+          gh api --paginate \
+            -H 'Accept: application/vnd.github+json' \
+            "/users/${{ github.repository_owner }}/packages/container/portfolio-backend/versions?per_page=100" \
+            --jq '.[] | [.id, (.metadata.container.tags // [] | join(",")), .created_at] | @tsv' \
+            | sort -k3 -r \
+            | head -200
+          echo "::endgroup::"
