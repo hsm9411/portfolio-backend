@@ -112,6 +112,8 @@ jobs:
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
             LogLevel ERROR
+            ServerAliveInterval 30
+            ServerAliveCountMax 6
           EOF
           chmod 600 ~/.ssh/config
 
@@ -241,6 +243,8 @@ jobs:
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
             LogLevel ERROR
+            ServerAliveInterval 30
+            ServerAliveCountMax 6
           EOF
           chmod 600 ~/.ssh/config
 
