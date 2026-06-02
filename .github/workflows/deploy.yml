@@ -118,6 +118,7 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Prepare directories and network
+        timeout-minutes: 2
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -126,6 +127,7 @@ jobs:
           ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend/nginx/conf.d ~/portfolio-backend/nginx/ssl/prod ~/portfolio-backend/nginx/logs"
 
       - name: Deploy files
+        timeout-minutes: 5
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -137,6 +139,7 @@ jobs:
           scp deploy.sh                            ${USER}@${HOST}:~/portfolio-backend/deploy.sh
 
       - name: Start or reload Nginx
+        timeout-minutes: 5
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -153,6 +156,7 @@ jobs:
           "
 
       - name: Deploy application
+        timeout-minutes: 10
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -161,6 +165,7 @@ jobs:
           ssh ${USER}@${HOST} "cd ~/portfolio-backend && chmod +x deploy.sh && export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && export IMAGE_TAG=latest && ./deploy.sh"
 
       - name: Deploy monitoring exporters
+        timeout-minutes: 5
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -170,6 +175,7 @@ jobs:
           ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d"
 
       - name: Verify deployment (poll /health)
+        timeout-minutes: 3
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -190,6 +196,7 @@ jobs:
 
       - name: Rollback to previous image
         if: failure()
+        timeout-minutes: 5
         env:
           HOST: ${{ secrets.ORACLE_HOST_PROD }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -249,6 +256,7 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Prepare directories and network
+        timeout-minutes: 2
         env:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -258,6 +266,7 @@ jobs:
           ssh ${USER}@${HOST} "mkdir -p ~/portfolio-backend-dev"
 
       - name: Deploy Nginx files
+        timeout-minutes: 5
         env:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -266,6 +275,7 @@ jobs:
           scp nginx/conf.d/portfolio-dev.conf      ${USER}@${HOST}:~/portfolio-backend/nginx/conf.d/portfolio.conf
 
       - name: Start or reload Nginx
+        timeout-minutes: 5
         env:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -282,6 +292,7 @@ jobs:
           "
 
       - name: Deploy application
+        timeout-minutes: 10
         env:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -292,6 +303,7 @@ jobs:
           ssh ${USER}@${HOST} "cd ~/portfolio-backend-dev && chmod +x deploy.sh && export GITHUB_REPOSITORY=${GITHUB_REPOSITORY} && export IMAGE_TAG=develop && ./deploy.sh"
 
       - name: Deploy monitoring stack
+        timeout-minutes: 5
         env:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -311,6 +323,7 @@ jobs:
           ssh ${USER}@${HOST} "cd ~/monitoring && docker compose up -d && docker exec portfolio-prometheus wget -qO- --post-data='' http://localhost:9090/-/reload || true"
 
       - name: Verify deployment (poll /health)
+        timeout-minutes: 3
         env:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
@@ -331,6 +344,7 @@ jobs:
 
       - name: Rollback to previous image
         if: failure()
+        timeout-minutes: 5
         env:
           HOST: ${{ secrets.ORACLE_HOST_DEV }}
           USER: ${{ secrets.ORACLE_USER }}
